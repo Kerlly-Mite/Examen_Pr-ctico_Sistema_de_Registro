@@ -64,7 +64,7 @@ func main() {
 	}))
 	routes.Registrar(app, deps)
 
-	port := config.GetEnv("PORT", "3000")
+	port := config.GetEnv("PORT", "3001")
 	go func() {
 		if err := app.Listen(":" + port); err != nil {
 			log.Fatalf("El servidor se detuvo: %v", err)
@@ -84,7 +84,7 @@ func main() {
 
 // origenesPermitidos devuelve los orígenes CORS: el frontend de Vite por defecto más los de CORS_ORIGINS.
 func origenesPermitidos() string {
-	origenes := []string{"http://localhost:5173", "http://127.0.0.1:5173"}
+	origenes := []string{"http://localhost:5180", "http://127.0.0.1:5180"}
 	if extra := config.GetEnv("CORS_ORIGINS", ""); extra != "" {
 		for _, o := range strings.Split(extra, ",") {
 			if o = strings.TrimSpace(o); o != "" {

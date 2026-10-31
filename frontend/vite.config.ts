@@ -6,11 +6,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5173,
+  port: 5180,
     strictPort: true,
-    // En desarrollo, las llamadas a /api se reenvían al backend en Go (evita problemas de CORS).
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      '/api': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
 })
