@@ -72,6 +72,8 @@ type Experiencia struct {
 	Actividades          string `json:"actividades"` // mismas opciones que area_estudios
 	DescripcionFunciones string `json:"descripcion_funciones"`
 	DocumentoRespaldo    string `json:"documento_respaldo"`
+	// Duracion la calcula el servidor (1.6: años, meses y días). Si el frontend la envía, se ignora.
+	Duracion *Duracion `json:"duracion,omitempty"`
 }
 
 // Publicacion (1.7): publicaciones e investigaciones.
@@ -173,6 +175,45 @@ type Postulacion struct {
 	Correo1 string `json:"correo_1"`
 
 	PostulacionReq
+
+	// Calculados por el servidor (Fase 5, reglas de negocio)
+	ExperienciaTotal  *Duracion          `json:"experiencia_total"`  // sin contar dos veces los periodos que se cruzan
+	VerificacionCargo *VerificacionCargo `json:"verificacion_cargo"` // resultado del Historial Laboral para el cargo elegido
+	Bloqueo           *Bloqueo           `json:"bloqueo"`            // si no es null, el postulante NO puede continuar
+}
+
+// Duracion expresa un tiempo de experiencia en años, meses y días.
+type Duracion struct {
+	Anios int `json:"anios"`
+	Meses int `json:"meses"`
+	Dias  int `json:"dias"`
+}
+
+// HistorialLaboral es la fuente SIMULADA del Historial Laboral del IESS (tabla historial_laboral_simulado).
+type HistorialLaboral struct {
+	EsAfiliado  bool
+	EsJubilado  bool
+	EsEmpleador bool
+}
+
+// VerificacionCargo es el resultado de 1.4.x: si el postulante cumple la calidad que exige el cargo.
+type VerificacionCargo struct {
+	CargoCodigo string `json:"cargo_codigo"`
+	Cumple      bool   `json:"cumple"`
+	Estado      string `json:"estado"`   // p. ej. "Postulante afiliado al IESS" / "Postulante No Afiliado al IESS"
+	Mensaje     string `json:"mensaje"`  // mensaje de rechazo del documento funcional (vacío si cumple)
+	Pregunta    string `json:"pregunta"` // pregunta del respaldo de organización que corresponde al cargo
+}
+
+// Bloqueo indica por qué la postulación quedó cerrada (p. ej. nacionalidad no ecuatoriana).
+type Bloqueo struct {
+	Codigo  string `json:"codigo"`
+	Mensaje string `json:"mensaje"`
+}
+
+// EnviarReq es el cuerpo de POST /api/postulacion/enviar (1.10).
+type EnviarReq struct {
+	ConsentimientoAceptado bool `json:"consentimiento_aceptado"`
 }
 
 // Cargo es una opción de 1.4.

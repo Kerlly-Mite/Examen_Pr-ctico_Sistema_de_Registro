@@ -95,6 +95,34 @@ func (r *postulacionPG) Guardar(ctx context.Context, p *models.Postulacion) erro
 	return nil
 }
 
+// MarcarEnviada usa un UPDATE condicional: solo cambia el estado si sigue en BORRADOR y si actualizado_en
+// es el mismo que se leyó al validar (nadie guardó cambios entre la validación y el envío).
+func (r *postulacionPG) MarcarEnviada(ctx context.Context, postulanteID int64, actualizadoEn time.Time) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE postulaciones
+		SET estado = 'ENVIADA', consentimiento_aceptado = TRUE, enviada_en = now(), actualizado_en = now()
+		WHERE postulante_id = $1 AND estado = 'BORRADOR' AND actualizado_en = $2`, postulanteID, actualizadoEn)
+	if err != nil {
+		return fmt.Errorf("enviar postulación: %w", traducirError(err))
+	}
+	if tag.RowsAffected() == 1 {
+		return nil
+	}
+	// No se actualizó: se averigua por qué.
+	var estado string
+	err = r.db.QueryRow(ctx, `SELECT estado FROM postulaciones WHERE postulante_id = $1`, postulanteID).Scan(&estado)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return ErrNoEncontrado
+	case err != nil:
+		return fmt.Errorf("verificar estado de la postulación: %w", err)
+	case estado == "ENVIADA":
+		return ErrPostulacionEnviada
+	default:
+		return ErrPostulacionModificada
+	}
+}
+
 func buscarCargoID(ctx context.Context, tx pgx.Tx, codigo string) (*int, error) {
 	c := nulo(codigo)
 	if c == nil {

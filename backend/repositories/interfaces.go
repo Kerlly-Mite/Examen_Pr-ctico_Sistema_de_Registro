@@ -24,6 +24,12 @@ type RegistroCivilRepository interface {
 	BuscarPorCedula(ctx context.Context, cedula string) (*models.RegistroCivil, error)
 }
 
+// HistorialLaboralRepository consulta la calidad de afiliado, jubilado o empleador (fuente simulada del IESS).
+type HistorialLaboralRepository interface {
+	// BuscarPorCedula devuelve ErrNoEncontrado si la cédula no tiene historial.
+	BuscarPorCedula(ctx context.Context, cedula string) (*models.HistorialLaboral, error)
+}
+
 // PostulanteRepository gestiona las cuentas de acceso.
 type PostulanteRepository interface {
 	// Crear devuelve ErrCedulaDuplicada o ErrCorreoDuplicado si ya existen.
@@ -43,6 +49,10 @@ type PostulacionRepository interface {
 	// Devuelve ErrPostulacionEnviada si ya fue enviada, ErrCodigoInexistente si un cargo o pregunta no existe
 	// y ErrDatoInvalido si la base rechaza un dato (CHECK, FK, NOT NULL, longitud).
 	Guardar(ctx context.Context, p *models.Postulacion) error
+	// MarcarEnviada pasa la postulación de BORRADOR a ENVIADA solo si no cambió desde que se validó
+	// (bloqueo optimista con actualizado_en). Devuelve ErrPostulacionEnviada si ya estaba enviada
+	// y ErrPostulacionModificada si otro guardado la cambió mientras tanto.
+	MarcarEnviada(ctx context.Context, postulanteID int64, actualizadoEn time.Time) error
 	ListarCargos(ctx context.Context) ([]models.Cargo, error)
 	ListarPreguntasInhabilidad(ctx context.Context) ([]models.PreguntaInhabilidad, error)
 }

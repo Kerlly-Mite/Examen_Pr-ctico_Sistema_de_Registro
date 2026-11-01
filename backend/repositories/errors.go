@@ -11,9 +11,10 @@ var (
 	ErrCorreoDuplicado = errors.New("el correo ya está registrado")
 	ErrCedulaDuplicada = errors.New("la cédula ya está registrada")
 
-	ErrPostulacionEnviada = errors.New("la postulación ya fue enviada y no se puede modificar")
-	ErrCodigoInexistente  = errors.New("código de catálogo inexistente")
-	ErrDatoInvalido       = errors.New("la base de datos rechazó un dato")
+	ErrPostulacionEnviada    = errors.New("la postulación ya fue enviada y no se puede modificar")
+	ErrPostulacionModificada = errors.New("la postulación cambió mientras se validaba el envío")
+	ErrCodigoInexistente     = errors.New("código de catálogo inexistente")
+	ErrDatoInvalido          = errors.New("la base de datos rechazó un dato")
 )
 
 // DatoInvalidoError detalla qué tabla y restricción rechazó el dato. Envuelve ErrDatoInvalido
