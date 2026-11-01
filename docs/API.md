@@ -213,3 +213,60 @@ Valores permitidos de las listas desplegables (los valida la base con `CHECK`):
 `INSERT` o `UPDATE` de `postulaciones` → `DELETE` + `INSERT` de las 6 tablas hijas → `COMMIT`.
 Si cualquier paso falla, `defer tx.Rollback(ctx)` deshace todo: no quedan datos a medias ni huérfanos.
 Se puede comprobar con `node pruebas/probar-fase4.mjs`.
+
+## Reglas de negocio (EF-12) — Fase 5 🔒
+
+### Rutas nuevas
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /postulacion/verificar-cargo/:codigo` | Consulta el Historial Laboral para el cargo (`AFILIADOS`, `JUBILADOS`, `EMPLEADORES`) sin guardar. Úsalo al elegir el cargo en el formulario (1.4.x) |
+| `POST /postulacion/enviar` | Envía la postulación (1.10). Cuerpo: `{ "consentimiento_aceptado": true }` |
+
+`GET /postulacion/verificar-cargo/AFILIADOS` → **200**
+```json
+{ "cargo_codigo": "AFILIADOS", "cumple": false, "estado": "Postulante No Afiliado al IESS",
+  "mensaje": "Su postulación para el cargo de Miembro Principal y Alterno ... NO puede continuar, por cuanto no mantiene la calidad de afiliado al IESS",
+  "pregunta": "¿Se encuentra respaldado por una organización de trabajadores ...?" }
+```
+Si `cumple` es `true`, mostrar `estado` y la `pregunta` del respaldo de organización (Sí/No). Si es `false`, mostrar `mensaje` y cerrar el formulario.
+
+### Campos nuevos en la respuesta de `GET`/`PUT /postulacion`
+```json
+{
+  "experiencia": [ { "...": "...", "duracion": { "anios": 5, "meses": 0, "dias": 0 } } ],
+  "experiencia_total": { "anios": 6, "meses": 0, "dias": 0 },
+  "verificacion_cargo": { "cargo_codigo": "JUBILADOS", "cumple": true, "estado": "Postulante acredita jubilación", "...": "..." },
+  "bloqueo": null
+}
+```
+- `duracion` (por experiencia) y `experiencia_total` los calcula el servidor (1.6). El total **no cuenta dos veces** los periodos que se cruzan.
+- `bloqueo`: si no es `null` (`{ "codigo": "nacionalidad_no_permitida" | "cargo_no_habilitado", "mensaje": "..." }`), el frontend muestra el mensaje y no deja continuar.
+
+### Reglas que valida el servidor
+**Al guardar** (`PUT /postulacion`, "Guardar progreso": se permite incompleto, pero lo ingresado debe ser coherente):
+| Regla | Error |
+|---|---|
+| 1.1.6 Solo nacionalidad ecuatoriana | 403 `nacionalidad_no_permitida` |
+| 1.4.x El cargo exige ser afiliado / jubilado / empleador (Historial Laboral) | 403 `cargo_no_habilitado` (con `estado`) |
+| 1.1.7.1 Casado o unión de hecho: nombres y cédula **válida** de la pareja (distinta de la propia). Otro estado civil: se descartan | 400 `solicitud_invalida` |
+| 1.2 Ecuador: provincia y cantón del catálogo. Otro país: `provincia_texto` y `ciudad_texto` (se descartan los ids). Teléfonos solo números; correo 2 válido | 400 `solicitud_invalida` |
+| 1.3 / 1.4 / 1.5-1.8 Cada registro agregado debe tener sus campos obligatorios; fechas no futuras; fecha fin ≥ inicio; horas > 0; descripción de funciones ≤ 1000 caracteres; documentos de respaldo en **PDF** | 400 `solicitud_invalida` (el `message` dice la sección y el número de registro) |
+| 1.9.7 Si responde "Sí": institución y motivo obligatorios | 400 `solicitud_invalida` |
+
+**Al enviar** (`POST /postulacion/enviar`):
+| Regla | Error |
+|---|---|
+| Debe aceptar el consentimiento (1.10.1) | 400 `solicitud_invalida` |
+| Debe estar guardada antes | 422 `postulacion_incompleta` |
+| Domicilio (país, provincia/cantón o textos, celular, calle principal), cargo y respuesta del respaldo de organización completos; si dijo que tiene familiares, al menos uno | 422 `postulacion_incompleta` (con `seccion`) |
+| Las 13 preguntas de inhabilidades respondidas | 422 `postulacion_incompleta` (con `preguntas` faltantes) |
+| Ninguna respuesta inhabilitante (según `respuesta_habilitante` de `/opciones`) | 403 `postulante_inhabilitado` (con `preguntas`) |
+| Ya enviada | 409 `postulacion_enviada` |
+| Se guardó otro cambio mientras se enviaba (bloqueo optimista con `actualizado_en`) | 409 `postulacion_modificada` |
+
+Al enviarse, el estado pasa a `ENVIADA` (ya no se puede modificar) y se "envía" el correo de confirmación (**simulado**: aparece en la consola del backend, 1.10.3).
+
+### Para la sustentación
+- Las reglas están en `services/reglas_postulacion.go` como funciones puras; se prueban sin base de datos con `go test ./services/` (incluye pruebas del servicio con repositorios falsos gracias a la inyección de dependencias).
+- El Historial Laboral está detrás de la interfaz `HistorialLaboralRepository`: para usar el servicio real del IESS solo cambia la implementación en `main.go`.
+- Prueba completa contra la base: `node pruebas/probar-fase5.mjs`.
