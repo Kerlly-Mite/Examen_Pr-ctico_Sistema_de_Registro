@@ -1,7 +1,9 @@
 // Servicio de Registro y Postulación al Directorio del BIESS (Frameworks de Programación Web).
 //
 // Arquitectura en capas con Inyección de Dependencias:
-//   main (compone todo) -> handlers (HTTP) -> services (negocio) -> repositories (PostgreSQL / Redis)
+//
+//	main (compone todo) -> handlers (HTTP) -> services (negocio) -> repositories (PostgreSQL / Redis)
+//
 // Cada capa conoce solo las INTERFACES de la capa inferior.
 package main
 
@@ -42,8 +44,9 @@ func main() {
 	}
 	defer rdb.Close()
 
-	// 2) Repositories (reciben la conexión).
-	catalogoRepo := repositories.NewCatalogoRepository(db)
+	// 2) Repositories (reciben la conexión). El de catálogos se envuelve con la caché Redis (decorador).
+	catalogoTTL := time.Duration(config.GetEnvInt("CATALOGO_TTL_HORAS", 24)) * time.Hour
+	catalogoRepo := repositories.NewCatalogoCache(repositories.NewCatalogoRepository(db), rdb, catalogoTTL)
 
 	// 3) Services (reciben repositories por interfaz).
 	catalogoSvc := services.NewCatalogoService(catalogoRepo)
@@ -82,7 +85,7 @@ func main() {
 	}
 }
 
-// origenesPermitidos devuelve los orígenes CORS: el frontend de Vite por defecto más los de CORS_ORIGINS.
+// origenesPermitidos devuelve los orígenes CORS: el frontend de Vite (puerto 5180) más los de CORS_ORIGINS.
 func origenesPermitidos() string {
 	origenes := []string{"http://localhost:5180", "http://127.0.0.1:5180"}
 	if extra := config.GetEnv("CORS_ORIGINS", ""); extra != "" {
