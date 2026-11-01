@@ -68,6 +68,7 @@ func main() {
 	postulanteRepo := repositories.NewPostulanteRepository(db)
 	limitador := repositories.NewLimitadorIntentos(rdb, maxIntentos, time.Duration(bloqueoMin)*time.Minute)
 	tokenStore := repositories.NewTokenStore(rdb)
+	postulacionRepo := repositories.NewPostulacionRepository(db)
 
 	// 3) Services (reciben repositories por interfaz).
 	gestorTokens := services.NewGestorTokens(jwtSecret, time.Duration(config.GetEnvInt("JWT_HORAS", 8))*time.Hour)
@@ -81,12 +82,14 @@ func main() {
 		services.NewNotificadorConsola(),
 		config.GetEnv("FRONTEND_URL", "http://localhost:5180"),
 	)
+	postulacionSvc := services.NewPostulacionService(postulacionRepo, postulanteRepo, registroCivilRepo)
 
 	// 4) Handlers (reciben services por interfaz).
 	deps := routes.Dependencias{
 		Health:       handlers.NewHealthHandler(db, repositories.NewRedisPinger(rdb)),
 		Catalogo:     handlers.NewCatalogoHandler(catalogoSvc),
 		Auth:         handlers.NewAuthHandler(authSvc),
+		Postulacion:  handlers.NewPostulacionHandler(postulacionSvc),
 		RequiereAuth: middleware.RequiereAuth(gestorTokens),
 	}
 
