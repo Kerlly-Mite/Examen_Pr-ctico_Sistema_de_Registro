@@ -118,3 +118,98 @@ cedula, _ := c.Locals(middleware.LocalCedula).(string)
 | `catalogo:paises`, `catalogo:provincias:{id}`, `catalogo:cantones:{id}` | listas en JSON | 24 h |
 
 `contexto` = `registro`, `login` o `recuperacion` (cada flujo cuenta aparte).
+
+## Postulación (EF-12) — Fase 4 🔒
+
+Todas requieren `Authorization: Bearer <token>`. El usuario se toma del JWT: nadie puede leer ni guardar la postulación de otra persona.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /postulacion/opciones` | Cargos (1.4) y preguntas de inhabilidades (1.9) para armar el formulario |
+| `GET /postulacion` | La postulación de quien tiene la sesión. Si aún no la guarda, `estado: "NUEVA"` con la información personal precargada |
+| `PUT /postulacion` | Guarda el formulario **completo** (cabecera + todas las secciones) en **una sola transacción** |
+
+### `GET /postulacion/opciones`
+```json
+{
+  "cargos": [ { "codigo": "AFILIADOS", "nombre": "Miembro Principal y Alterno ...", "sector": "AFILIADOS" }, ... ],
+  "inhabilidades": [ { "codigo": "1.9.1", "texto": "¿Es Ecuatoriano/a ...?", "respuesta_habilitante": true }, ... ]
+}
+```
+Cargos y preguntas se identifican por `codigo` (estable), nunca por id.
+
+### `GET /postulacion` y respuesta de `PUT /postulacion`
+```json
+{
+  "id": 1, "codigo": "BIESS-2026-000001", "estado": "BORRADOR", "enviada_en": null, "actualizado_en": "2026-11-01T15:40:57-05:00",
+  "cedula": "0104567896", "nombres": "JOSE LUIS", "apellidos": "RAMIREZ SOLIS", "genero": "MASCULINO",
+  "fecha_nacimiento": "1990-01-25", "nacionalidad": "ECUATORIANA", "estado_civil": "UNION_DE_HECHO",
+  "correo_1": "jose@correo.com",
+  "...": "más todos los campos del cuerpo del PUT (abajo)"
+}
+```
+- `estado`: `NUEVA` (nunca guardada: `id` = 0 y `codigo` = ""), `BORRADOR` o `ENVIADA`.
+- Información personal (1.1) y `correo_1` (1.2.5) son **solo lectura**: salen del Registro Civil y de la cuenta. Si se envían en el PUT, se ignoran.
+- Las listas siempre llegan como `[]`, nunca `null`. Fechas en `AAAA-MM-DD`.
+
+### Cuerpo de `PUT /postulacion`
+Se envía el formulario completo cada vez (las listas reemplazan a las anteriores). Sirve para "Guardar progreso": los campos vacíos se permiten mientras no sean obligatorios en la base.
+```json
+{
+  "pareja_nombres": "ANA MARIA PEREZ", "pareja_cedula": "0102030405",
+  "pais_id": 52, "provincia_id": 1, "canton_id": 1,
+  "provincia_texto": "", "ciudad_texto": "",
+  "telefono_celular": "0991111111", "correo_2": "", "calle_principal": "Av. Solano", "numero": "1-23",
+  "calle_secundaria": "", "sector": "El Vergel", "referencia": "", "telefono_domicilio": "",
+
+  "tiene_familiares_iess": true,
+  "familiares": [ { "nombres_apellidos": "PEDRO RAMIREZ", "parentesco": "TIO", "institucion": "IESS", "area": "Salud", "cargo": "Médico" } ],
+
+  "cargo_codigo": "AFILIADOS", "respaldado_organizacion": false, "organizacion_nombre": "", "organizacion_documento": "",
+
+  "formacion": [ { "nivel_instruccion": "CUARTO_MAESTRIA", "institucion": "Universidad de Cuenca", "tipo": "NACIONAL",
+                   "titulo": "Magíster en Finanzas", "area_estudios": "FINANZAS", "registro_senescyt": "1005-2019-123456",
+                   "fecha_registro_senescyt": "2019-08-10", "documento_respaldo": "titulo.pdf" } ],
+  "experiencia": [ { "tipo": "DIRECCION", "cargo": "Director", "institucion": "Cooperativa Andina",
+                     "fecha_inicio": "2020-01-01", "fecha_fin": "2024-06-30", "actividades": "FINANZAS",
+                     "descripcion_funciones": "Dirección financiera", "documento_respaldo": "exp.pdf" } ],
+  "publicaciones": [ { "titulo": "...", "tipo": "PUBLICACION", "medio_publicacion": "...", "fecha_publicacion": "2022-05-01",
+                       "relacionada_formacion": true, "documento_respaldo": "pub.pdf" } ],
+  "capacitaciones": [ { "tipo_evento": "CURSO", "nombre_evento": "Riesgo financiero", "institucion": "BCE",
+                        "fecha_inicio": "2023-03-01", "fecha_fin": "2023-03-05", "horas": 40, "documento_respaldo": "curso.pdf" } ],
+  "inhabilidades": [ { "codigo": "1.9.1", "respuesta": true },
+                     { "codigo": "1.9.7", "respuesta": true, "remocion_institucion": "...", "remocion_cargo": "...",
+                       "remocion_fecha_fin": "2022-01-31", "remocion_motivo": "..." } ]
+}
+```
+Valores permitidos de las listas desplegables (los valida la base con `CHECK`):
+
+| Campo | Valores |
+|---|---|
+| `parentesco` | `CONVIVIENTE`, `CONYUGE`, `CUNADO`, `HERMANO`, `HIJO_POLITICO`, `HIJO`, `MADRE`, `NIETO`, `NUERA`, `PADRE`, `PRIMO_HERMANO`, `SOBRINO`, `SUEGRO`, `TIO`, `YERNO` |
+| `institucion` (familiar) | `IESS`, `BIESS` |
+| `nivel_instruccion` | `TERCER_NIVEL`, `CUARTO_ESPECIALIDAD`, `CUARTO_MAESTRIA`, `CUARTO_PHD` |
+| `tipo` (formación) | `NACIONAL`, `EXTRANJERA` |
+| `area_estudios`, `actividades` | `FINANZAS`, `MERCADO_CAPITALES`, `ADMINISTRACION`, `ECONOMIA`, `DERECHO`, `AFINES` |
+| `tipo` (experiencia) | `GENERAL`, `DIRECCION` |
+| `tipo` (publicación) | `PUBLICACION`, `TRABAJO_INVESTIGACION` |
+| `tipo_evento` | `CURSO`, `SEMINARIO`, `TALLER` |
+
+- Ecuador: enviar `provincia_id` y `canton_id` de los catálogos. Otro país: `provincia_texto` y `ciudad_texto`.
+- Si `tiene_familiares_iess` es `false`, la lista `familiares` se descarta. Si `respaldado_organizacion` no es `true`, se descartan los datos de la organización.
+- `documento_respaldo`: por ahora es el nombre del archivo (la subida del PDF va en una fase posterior).
+
+**Errores de `PUT /postulacion`**
+
+| HTTP | `error` | Cuándo | Campos extra |
+|---|---|---|---|
+| 400 | `solicitud_invalida` | JSON roto, fecha mal escrita, cargo o pregunta de inhabilidad inexistente | — |
+| 400 | `dato_invalido` | La base rechazó un dato: campo obligatorio vacío en una sección, valor fuera de la lista, fecha fin antes de la de inicio, cantón que no pertenece a la provincia | `seccion` (tabla), `restriccion` |
+| 401 | `no_autorizado` | Sin sesión | — |
+| 409 | `postulacion_enviada` | La postulación ya se envió y no se puede modificar | — |
+
+### Transacción (para la sustentación)
+`repositories/postulacion_pg.go → Guardar`: `BEGIN` → `SELECT ... FOR UPDATE` (bloquea la fila contra dos guardados simultáneos) →
+`INSERT` o `UPDATE` de `postulaciones` → `DELETE` + `INSERT` de las 6 tablas hijas → `COMMIT`.
+Si cualquier paso falla, `defer tx.Rollback(ctx)` deshace todo: no quedan datos a medias ni huérfanos.
+Se puede comprobar con `node pruebas/probar-fase4.mjs`.
