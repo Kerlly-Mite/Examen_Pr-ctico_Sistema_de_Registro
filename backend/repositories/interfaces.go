@@ -4,6 +4,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"biess-backend/models"
 )
@@ -15,6 +16,22 @@ type CatalogoRepository interface {
 	ListarCantones(ctx context.Context, provinciaID int) ([]models.Canton, error)
 	ExistePais(ctx context.Context, paisID int) (bool, error)
 	ExisteProvincia(ctx context.Context, provinciaID int) (bool, error)
+}
+
+// RegistroCivilRepository consulta la fuente de identidad (simulada) por cédula.
+type RegistroCivilRepository interface {
+	// BuscarPorCedula devuelve ErrNoEncontrado si la cédula no existe.
+	BuscarPorCedula(ctx context.Context, cedula string) (*models.RegistroCivil, error)
+}
+
+// PostulanteRepository gestiona las cuentas de acceso.
+type PostulanteRepository interface {
+	// Crear devuelve ErrCedulaDuplicada o ErrCorreoDuplicado si ya existen.
+	Crear(ctx context.Context, cedula, correo, passwordHash string) (int64, error)
+	// BuscarPorCedula devuelve ErrNoEncontrado si no hay cuenta.
+	BuscarPorCedula(ctx context.Context, cedula string) (*models.Postulante, error)
+	BuscarPerfilPorID(ctx context.Context, id int64) (*models.PerfilPostulante, error)
+	ActualizarPassword(ctx context.Context, id int64, passwordHash string) error
 }
 
 // EstadoIntentos describe el resultado de registrar un intento fallido.
@@ -31,6 +48,14 @@ type LimitadorIntentos interface {
 	Verificar(ctx context.Context, contexto, id string) (int, error)
 	RegistrarFallo(ctx context.Context, contexto, id string) (EstadoIntentos, error)
 	Reiniciar(ctx context.Context, contexto, id string) error
+}
+
+// TokenStore guarda tokens temporales de un solo propósito (verificación de registro, recuperación). Implementado en Redis.
+type TokenStore interface {
+	Guardar(ctx context.Context, prefijo, token, valor string, ttl time.Duration) error
+	// Obtener devuelve ErrNoEncontrado si el token no existe o expiró.
+	Obtener(ctx context.Context, prefijo, token string) (string, error)
+	Eliminar(ctx context.Context, prefijo, token string) error
 }
 
 // Pinger lo implementan PostgreSQL y Redis (a través de un adaptador) para el endpoint de salud.
