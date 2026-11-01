@@ -1,7 +1,9 @@
 // Servicio de Registro y Postulación al Directorio del BIESS (Frameworks de Programación Web).
 //
 // Arquitectura en capas con Inyección de Dependencias:
-//   main (compone todo) -> handlers (HTTP) -> services (negocio) -> repositories (PostgreSQL / Redis)
+//
+//	main (compone todo) -> handlers (HTTP) -> services (negocio) -> repositories (PostgreSQL / Redis)
+//
 // Cada capa conoce solo las INTERFACES de la capa inferior.
 package main
 
@@ -20,6 +22,7 @@ import (
 
 	"biess-backend/config"
 	"biess-backend/handlers"
+	"biess-backend/middleware"
 	"biess-backend/repositories"
 	"biess-backend/routes"
 	"biess-backend/services"
@@ -28,6 +31,22 @@ import (
 func main() {
 	config.LoadEnv()
 	ctx := context.Background()
+
+	// Seguridad: el secreto del JWT es obligatorio (mínimo 32 caracteres).
+	jwtSecret := config.GetEnv("JWT_SECRET", "")
+	if len(jwtSecret) < 32 {
+		log.Fatal("JWT_SECRET no está definido o es muy corto (mínimo 32 caracteres). Agrégalo a tu archivo .env")
+	}
+
+	// Reglas de EF-11: 3 intentos fallidos consecutivos -> bloqueo de 10 minutos (configurables).
+	maxIntentos := config.GetEnvInt("MAX_INTENTOS", 3)
+	if maxIntentos < 1 {
+		maxIntentos = 3
+	}
+	bloqueoMin := config.GetEnvInt("BLOQUEO_MINUTOS", 10)
+	if bloqueoMin < 1 {
+		bloqueoMin = 10
+	}
 
 	// 1) Infraestructura: PostgreSQL y Redis son obligatorios.
 	db, err := config.ConnectDB(ctx)
@@ -42,16 +61,33 @@ func main() {
 	}
 	defer rdb.Close()
 
-	// 2) Repositories (reciben la conexión).
-	catalogoRepo := repositories.NewCatalogoRepository(db)
+	// 2) Repositories (reciben la conexión). El de catálogos se envuelve con la caché Redis (decorador).
+	catalogoTTL := time.Duration(config.GetEnvInt("CATALOGO_TTL_HORAS", 24)) * time.Hour
+	catalogoRepo := repositories.NewCatalogoCache(repositories.NewCatalogoRepository(db), rdb, catalogoTTL)
+	registroCivilRepo := repositories.NewRegistroCivilRepository(db)
+	postulanteRepo := repositories.NewPostulanteRepository(db)
+	limitador := repositories.NewLimitadorIntentos(rdb, maxIntentos, time.Duration(bloqueoMin)*time.Minute)
+	tokenStore := repositories.NewTokenStore(rdb)
 
 	// 3) Services (reciben repositories por interfaz).
+	gestorTokens := services.NewGestorTokens(jwtSecret, time.Duration(config.GetEnvInt("JWT_HORAS", 8))*time.Hour)
 	catalogoSvc := services.NewCatalogoService(catalogoRepo)
+	authSvc := services.NewAuthService(
+		registroCivilRepo,
+		postulanteRepo,
+		limitador,
+		tokenStore,
+		gestorTokens,
+		services.NewNotificadorConsola(),
+		config.GetEnv("FRONTEND_URL", "http://localhost:5180"),
+	)
 
 	// 4) Handlers (reciben services por interfaz).
 	deps := routes.Dependencias{
-		Health:   handlers.NewHealthHandler(db, repositories.NewRedisPinger(rdb)),
-		Catalogo: handlers.NewCatalogoHandler(catalogoSvc),
+		Health:       handlers.NewHealthHandler(db, repositories.NewRedisPinger(rdb)),
+		Catalogo:     handlers.NewCatalogoHandler(catalogoSvc),
+		Auth:         handlers.NewAuthHandler(authSvc),
+		RequiereAuth: middleware.RequiereAuth(gestorTokens),
 	}
 
 	// 5) Servidor web.
@@ -82,7 +118,7 @@ func main() {
 	}
 }
 
-// origenesPermitidos devuelve los orígenes CORS: el frontend de Vite por defecto más los de CORS_ORIGINS.
+// origenesPermitidos devuelve los orígenes CORS: el frontend de Vite (puerto 5180) más los de CORS_ORIGINS.
 func origenesPermitidos() string {
 	origenes := []string{"http://localhost:5180", "http://127.0.0.1:5180"}
 	if extra := config.GetEnv("CORS_ORIGINS", ""); extra != "" {
