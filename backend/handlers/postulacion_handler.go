@@ -42,6 +42,31 @@ func (h *PostulacionHandler) Guardar(c *fiber.Ctx) error {
 	return c.JSON(p)
 }
 
+// VerificarCargo responde GET /api/postulacion/verificar-cargo/:codigo (1.4.x): muestra al instante
+// "Postulante afiliado al IESS" o el mensaje de rechazo, antes de guardar.
+func (h *PostulacionHandler) VerificarCargo(c *fiber.Ctx) error {
+	id, _ := c.Locals(middleware.LocalPostulanteID).(int64)
+	v, err := h.svc.VerificarCargo(c.UserContext(), id, c.Params("codigo"))
+	if err != nil {
+		return responderError(c, err)
+	}
+	return c.JSON(v)
+}
+
+// Enviar responde POST /api/postulacion/enviar (1.10): valida que esté completa y la marca como ENVIADA.
+func (h *PostulacionHandler) Enviar(c *fiber.Ctx) error {
+	id, _ := c.Locals(middleware.LocalPostulanteID).(int64)
+	var req models.EnviarReq
+	if err := c.BodyParser(&req); err != nil {
+		return responderError(c, errCuerpoInvalido)
+	}
+	p, err := h.svc.Enviar(c.UserContext(), id, req)
+	if err != nil {
+		return responderError(c, err)
+	}
+	return c.JSON(p)
+}
+
 // Opciones responde GET /api/postulacion/opciones: cargos y preguntas de inhabilidades.
 func (h *PostulacionHandler) Opciones(c *fiber.Ctx) error {
 	op, err := h.svc.Opciones(c.UserContext())
