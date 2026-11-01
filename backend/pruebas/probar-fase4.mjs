@@ -54,7 +54,7 @@ const experiencia = (cargo, inicio, fin) => ({
 })
 
 const valida = {
-  pareja_nombres: 'ANA MARIA PEREZ', pareja_cedula: '0102030405',
+  pareja_nombres: 'ANA MARIA PEREZ', pareja_cedula: '0102030400',
   pais_id: ecuador.id, provincia_id: azuay.id, canton_id: cuenca.id,
   telefono_celular: '0991111111', calle_principal: 'Av. Solano', numero: '1-23', sector: 'El Vergel',
   tiene_familiares_iess: true,
@@ -93,7 +93,7 @@ comprobar('La cabecera NO cambió (teléfono sigue en 0991111111)', actual.telef
 comprobar('Las experiencias NO cambiaron (siguen siendo 2)', actual.experiencia.length === 2)
 
 const fechasAlReves = { ...valida, telefono_celular: '0988888888', capacitaciones: [{ ...valida.capacitaciones[0], fecha_fin: '2023-02-01' }] }
-mostrar('Guardar con fecha fin < fecha inicio (CHECK de la base)', await llamar('PUT', '/postulacion', fechasAlReves, token), 400)
+mostrar('Guardar con fecha fin < fecha inicio (regla del servicio)', await llamar('PUT', '/postulacion', fechasAlReves, token), 400)
 actual = (await llamar('GET', '/postulacion', null, token)).data
 comprobar('Tras el ROLLBACK el teléfono sigue en 0991111111', actual.telefono_celular === '0991111111')
 
