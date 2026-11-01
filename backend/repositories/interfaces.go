@@ -34,6 +34,19 @@ type PostulanteRepository interface {
 	ActualizarPassword(ctx context.Context, id int64, passwordHash string) error
 }
 
+// PostulacionRepository persiste el formulario EF-12 (cabecera postulaciones + tablas hijas).
+type PostulacionRepository interface {
+	// BuscarPorPostulante devuelve ErrNoEncontrado si la persona aún no guarda su postulación.
+	BuscarPorPostulante(ctx context.Context, postulanteID int64) (*models.Postulacion, error)
+	// Guardar inserta o actualiza la postulación y reemplaza TODAS sus tablas hijas en UNA transacción
+	// (BEGIN ... COMMIT). Si cualquier inserción falla se hace ROLLBACK y no queda nada a medias.
+	// Devuelve ErrPostulacionEnviada si ya fue enviada, ErrCodigoInexistente si un cargo o pregunta no existe
+	// y ErrDatoInvalido si la base rechaza un dato (CHECK, FK, NOT NULL, longitud).
+	Guardar(ctx context.Context, p *models.Postulacion) error
+	ListarCargos(ctx context.Context) ([]models.Cargo, error)
+	ListarPreguntasInhabilidad(ctx context.Context) ([]models.PreguntaInhabilidad, error)
+}
+
 // EstadoIntentos describe el resultado de registrar un intento fallido.
 type EstadoIntentos struct {
 	Bloqueado       bool // true si con este fallo se alcanzó el máximo y se activó el bloqueo
