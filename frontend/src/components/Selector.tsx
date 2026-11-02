@@ -36,7 +36,7 @@ export function Selector({
         value={valor ?? ''}
         onChange={(e) => onCambio(e.target.value === '' ? null : Number(e.target.value))}
         aria-invalid={error ? true : undefined}
-        className={`mt-1 w-full rounded border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 ${
+        className={`mt-1 w-full rounded border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-oro-500 disabled:bg-slate-100 ${
           error ? 'border-red-500' : 'border-slate-300'
         }`}
       >

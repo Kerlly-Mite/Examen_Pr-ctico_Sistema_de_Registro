@@ -13,7 +13,7 @@ interface Props<T> {
   onEliminar: (indice: number) => void
 }
 
-const botonPrincipal = 'rounded bg-blue-800 px-4 py-2 text-sm font-medium text-white hover:bg-blue-900'
+const botonPrincipal = 'rounded bg-biess-800 px-4 py-2 text-sm font-medium text-white hover:bg-biess-900'
 const botonSecundario = 'rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-50'
 
 export function PanelLista<T>({

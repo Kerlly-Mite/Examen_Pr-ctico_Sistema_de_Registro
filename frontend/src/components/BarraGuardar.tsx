@@ -13,11 +13,9 @@ export function BarraGuardar({ aviso, guardando, onGuardar, texto = 'Guardar pro
   return (
     <div className="space-y-3">
       {aviso && <Alerta tipo={aviso.tipo}>{aviso.texto}</Alerta>}
-      <div className="max-w-xs">
-        <Boton type="button" cargando={guardando} onClick={onGuardar}>
-          {texto}
-        </Boton>
-      </div>
+      <Boton type="button" variante="borde" autoAncho cargando={guardando} onClick={onGuardar}>
+        {texto}
+      </Boton>
     </div>
   )
 }

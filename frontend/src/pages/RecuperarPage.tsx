@@ -49,7 +49,7 @@ export function RecuperarPage() {
       )}
 
       <p className="mt-4 text-sm">
-        <Link to="/login" className="text-blue-700 underline">
+        <Link to="/login" className="text-biess-700 underline">
           Volver a iniciar sesión
         </Link>
       </p>

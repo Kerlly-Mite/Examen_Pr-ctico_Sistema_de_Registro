@@ -88,10 +88,10 @@ export function LoginPage() {
       </form>
 
       <div className="mt-4 flex justify-between text-sm">
-        <Link to="/recuperar" className="text-blue-700 underline">
+        <Link to="/recuperar" className="text-biess-700 underline">
           ¿Olvidaste tu contraseña?
         </Link>
-        <Link to="/registro" className="text-blue-700 underline">
+        <Link to="/registro" className="text-biess-700 underline">
           Registrarse
         </Link>
       </div>

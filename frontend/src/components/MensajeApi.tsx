@@ -19,7 +19,7 @@ export function MensajeApi({ error, intentos, restantes }: Props) {
       )}
       {restantes > 0 && (
         <p className="mt-1">
-          Podrá intentarlo de nuevo en <strong>{formatearTiempo(restantes)}</strong>.
+          Podrás reintentar en <strong>{formatearTiempo(restantes)}</strong>.
         </p>
       )}
     </Alerta>

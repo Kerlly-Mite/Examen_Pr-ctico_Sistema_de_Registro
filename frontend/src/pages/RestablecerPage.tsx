@@ -48,7 +48,7 @@ export function RestablecerPage() {
       {!token ? (
         <div className="mt-4 space-y-3">
           <Alerta tipo="error">El enlace no es válido: falta el token.</Alerta>
-          <Link to="/recuperar" className="text-sm text-blue-700 underline">
+          <Link to="/recuperar" className="text-sm text-biess-700 underline">
             Solicitar un nuevo enlace
           </Link>
         </div>
@@ -57,7 +57,7 @@ export function RestablecerPage() {
           <div className="mt-4">
             <MensajeApi error={error} intentos={intentos} restantes={restantes} />
             {codigo === 'enlace_invalido' && (
-              <Link to="/recuperar" className="mt-2 inline-block text-sm text-blue-700 underline">
+              <Link to="/recuperar" className="mt-2 inline-block text-sm text-biess-700 underline">
                 Solicitar un nuevo enlace
               </Link>
             )}
