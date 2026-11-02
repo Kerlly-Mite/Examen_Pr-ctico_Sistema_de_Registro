@@ -1,8 +1,9 @@
 import type { SelectHTMLAttributes } from 'react'
+import type { Opcion } from '../lib/opciones'
 
 interface Props extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> {
   etiqueta: string
-  opciones: readonly string[]
+  opciones: readonly Opcion[]
   valor: string
   onCambio: (valor: string) => void
   placeholder?: string
@@ -37,8 +38,8 @@ export function SelectorTexto({
       >
         <option value="">{placeholder}</option>
         {opciones.map((o) => (
-          <option key={o} value={o}>
-            {o}
+          <option key={o.valor} value={o.valor}>
+            {o.etiqueta}
           </option>
         ))}
       </select>
