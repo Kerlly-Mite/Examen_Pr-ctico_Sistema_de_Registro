@@ -11,7 +11,7 @@ interface Props {
 
 export function BarraGuardar({ aviso, guardando, onGuardar, texto = 'Guardar progreso' }: Props) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 print:hidden">
       {aviso && <Alerta tipo={aviso.tipo}>{aviso.texto}</Alerta>}
       <Boton type="button" variante="borde" autoAncho cargando={guardando} onClick={onGuardar}>
         {texto}

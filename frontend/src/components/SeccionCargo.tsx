@@ -58,8 +58,8 @@ export function SeccionCargo() {
   const mostrarRespaldo = p.cargo_codigo !== '' && !consultando && (verif === null || verif.cumple)
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
-      <h2 className="text-lg font-semibold">Selección del cargo al que postula</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-biess-800">Selección del cargo al que postula</h2>
 
       <div className="mt-4 space-y-4">
         <SelectorTexto

@@ -49,8 +49,8 @@ export function SeccionPublicaciones() {
   const pendiente = tiene && lista.hayContenido() ? 'Tiene una publicación sin agregar. Pulse Agregar o Cancelar.' : null
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
-      <h2 className="text-lg font-semibold">Publicaciones</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-biess-800">Publicaciones</h2>
 
       <div className="mt-4 space-y-4">
         <GrupoSiNo

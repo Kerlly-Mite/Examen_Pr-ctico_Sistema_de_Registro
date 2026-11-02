@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Alerta } from '../components/Alerta'
 import { Boton } from '../components/Boton'
+import { Cargando } from '../components/Cargando'
 import { SeccionCapacitacion } from '../components/SeccionCapacitacion'
 import { SeccionCargo } from '../components/SeccionCargo'
 import { SeccionDomicilio } from '../components/SeccionDomicilio'
@@ -35,7 +36,7 @@ function Contenido() {
   const [actual, setActual] = useState(0)
 
   if (cargando) {
-    return <p className="text-center text-slate-600">Cargando formulario...</p>
+    return <Cargando texto="Cargando formulario..." />
   }
 
   if (errorCarga !== null || postulacion === null || opciones === null) {
@@ -88,7 +89,7 @@ function Contenido() {
         <SeccionPersonal />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
-          <aside className="h-fit rounded-lg bg-white p-4 shadow lg:sticky lg:top-4">
+          <aside className="h-fit rounded-lg border border-slate-200 bg-white p-4 shadow-sm print:hidden lg:sticky lg:top-4">
             <p className="text-sm font-semibold text-biess-800">Secciones</p>
             <p className="mt-1 text-xs text-slate-600">
               {completas} de {total} completas
@@ -129,15 +130,15 @@ function Contenido() {
             <fieldset disabled={enviada} className="min-w-0">
               {secciones.map((s, i) =>
                 s.id === 'envio' ? null : (
-                  <div key={s.id} className={i === actual ? 'block' : 'hidden'}>
+                  <div key={s.id} className={i === actual ? 'block' : 'hidden print:block'}>
                     {VISTAS[s.id]}
                   </div>
                 ),
               )}
             </fieldset>
-            <div className={actual === ultima ? 'block' : 'hidden'}>{VISTAS.envio}</div>
+            <div className={actual === ultima ? 'block' : 'hidden print:block'}>{VISTAS.envio}</div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
               <Boton type="button" variante="borde" autoAncho disabled={actual === 0} onClick={() => ir(actual - 1)}>
                 Anterior
               </Boton>

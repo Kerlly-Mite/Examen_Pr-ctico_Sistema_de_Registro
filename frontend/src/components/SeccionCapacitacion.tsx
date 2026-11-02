@@ -30,8 +30,8 @@ export function SeccionCapacitacion() {
   const pendiente = lista.hayContenido() ? 'Tiene una capacitación sin agregar. Pulse Agregar o Cancelar.' : null
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
-      <h2 className="text-lg font-semibold">Capacitación</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-biess-800">Capacitación</h2>
 
       <div className="mt-4 space-y-4">
         <PanelLista

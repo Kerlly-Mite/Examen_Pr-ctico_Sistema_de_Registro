@@ -43,8 +43,8 @@ export function SeccionEnvio() {
   }
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
-      <h2 className="text-lg font-semibold">Declaración y envío</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-biess-800">Declaración y envío</h2>
 
       <div className="mt-4 space-y-4">
         <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
@@ -106,12 +106,12 @@ export function SeccionEnvio() {
 
             <div className="flex flex-wrap gap-3">
               <div className="w-56">
-                <Boton type="button" cargando={guardando} onClick={() => void alGuardar()}>
+                <Boton type="button" variante="borde" cargando={guardando} onClick={() => void alGuardar()}>
                   Guardar Postulación
                 </Boton>
               </div>
               <div className="w-56">
-                <Boton type="button" cargando={guardando} onClick={() => void alEnviar()}>
+                <Boton type="button" variante="oro" cargando={guardando} onClick={() => void alEnviar()}>
                   Enviar Postulación
                 </Boton>
               </div>

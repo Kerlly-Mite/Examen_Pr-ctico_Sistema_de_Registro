@@ -41,8 +41,8 @@ export function SeccionInhabilidades() {
       : null
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
-      <h2 className="text-lg font-semibold">Inhabilidades</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-biess-800">Inhabilidades</h2>
 
       <div className="mt-4 space-y-5">
         {opciones.inhabilidades.map((q) => {
