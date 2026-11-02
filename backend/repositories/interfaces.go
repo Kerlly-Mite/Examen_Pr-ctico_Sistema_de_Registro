@@ -30,6 +30,16 @@ type HistorialLaboralRepository interface {
 	BuscarPorCedula(ctx context.Context, cedula string) (*models.HistorialLaboral, error)
 }
 
+// DocumentoStore guarda los PDF de respaldo de cada postulante. Implementado en disco (carpeta UPLOADS_DIR);
+// se podría cambiar por un almacenamiento en la nube con la misma interfaz.
+type DocumentoStore interface {
+	// Guardar almacena el archivo y devuelve su identificador (el valor que se guarda en documento_respaldo).
+	Guardar(ctx context.Context, postulanteID int64, nombreOriginal string, datos []byte) (string, error)
+	// Leer devuelve ErrNoEncontrado si el documento no existe o no pertenece a ese postulante.
+	Leer(ctx context.Context, postulanteID int64, id string) ([]byte, error)
+	Existe(ctx context.Context, postulanteID int64, id string) (bool, error)
+}
+
 // PostulanteRepository gestiona las cuentas de acceso.
 type PostulanteRepository interface {
 	// Crear devuelve ErrCedulaDuplicada o ErrCorreoDuplicado si ya existen.

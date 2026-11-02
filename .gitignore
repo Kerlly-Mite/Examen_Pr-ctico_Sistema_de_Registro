@@ -16,3 +16,6 @@ frontend/dist
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Documentos PDF subidos por los postulantes (datos personales: nunca a GitHub)
+backend/uploads/
