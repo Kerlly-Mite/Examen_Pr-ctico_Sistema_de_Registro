@@ -235,3 +235,11 @@ type OpcionesPostulacion struct {
 	Cargos        []Cargo               `json:"cargos"`
 	Inhabilidades []PreguntaInhabilidad `json:"inhabilidades"`
 }
+
+// DocumentoSubido es la respuesta de POST /api/postulacion/documentos. ID es el valor que se guarda en
+// documento_respaldo u organizacion_documento.
+type DocumentoSubido struct {
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+	Tamano int    `json:"tamano"` // bytes
+}

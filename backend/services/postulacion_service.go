@@ -26,25 +26,25 @@ type PostulacionService interface {
 	Enviar(ctx context.Context, postulanteID int64, req models.EnviarReq) (*models.Postulacion, error)
 	// Opciones devuelve los cargos y las preguntas de inhabilidades para armar el formulario.
 	Opciones(ctx context.Context) (*models.OpcionesPostulacion, error)
+	// SubirDocumento valida y guarda un PDF de respaldo. tipo: "respaldo" (máx. 2 MB) u "organizacion" (máx. 4 MB).
+	SubirDocumento(ctx context.Context, postulanteID int64, tipo, nombre string, datos []byte) (*models.DocumentoSubido, error)
+	// Documento devuelve un PDF del propio postulante.
+	Documento(ctx context.Context, postulanteID int64, id string) ([]byte, error)
+	// FormularioPDF genera el formulario completo para imprimir y firmar (1.10.2). Devuelve el PDF y su código.
+	FormularioPDF(ctx context.Context, postulanteID int64) ([]byte, string, error)
 }
 
-// NotificadorPostulacion envía al correo del postulante la confirmación del envío (1.10.3).
-// Se SIMULA en consola, igual que el correo de recuperación de contraseña.
+// NotificadorPostulacion envía al correo del postulante la confirmación del envío con el formulario adjunto (1.10.3).
 type NotificadorPostulacion interface {
-	EnviarConfirmacion(ctx context.Context, correo, codigo string) error
+	EnviarConfirmacion(ctx context.Context, p *models.Postulacion, formularioPDF []byte) error
 }
 
-type notificadorPostulacionConsola struct{}
-
-// NewNotificadorPostulacionConsola devuelve el notificador simulado (escribe en la consola del backend).
-func NewNotificadorPostulacionConsola() NotificadorPostulacion {
-	return notificadorPostulacionConsola{}
-}
-
-func (notificadorPostulacionConsola) EnviarConfirmacion(_ context.Context, correo, codigo string) error {
-	log.Printf("[CORREO SIMULADO] Para: %s | Su postulación %s fue enviada. Adjunto: formulario de postulación.", correo, codigo)
-	return nil
-}
+// Tamaños máximos de los PDF según el requerimiento: 2 MB los respaldos (1.5 a 1.8) y 4 MB el de la organización (1.4).
+const (
+	maxPDFRespaldo     = 2 << 20
+	maxPDFOrganizacion = 4 << 20
+	timeoutCorreo      = 60 * time.Second
+)
 
 type postulacionService struct {
 	postulaciones repositories.PostulacionRepository
@@ -52,6 +52,7 @@ type postulacionService struct {
 	registro      repositories.RegistroCivilRepository
 	historial     repositories.HistorialLaboralRepository
 	catalogos     repositories.CatalogoRepository
+	documentos    repositories.DocumentoStore
 	notificador   NotificadorPostulacion
 	ahora         func() time.Time // inyectable para pruebas
 }
@@ -64,6 +65,7 @@ func NewPostulacionService(
 	registro repositories.RegistroCivilRepository,
 	historial repositories.HistorialLaboralRepository,
 	catalogos repositories.CatalogoRepository,
+	documentos repositories.DocumentoStore,
 	notificador NotificadorPostulacion,
 ) PostulacionService {
 	return &postulacionService{
@@ -72,6 +74,7 @@ func NewPostulacionService(
 		registro:      registro,
 		historial:     historial,
 		catalogos:     catalogos,
+		documentos:    documentos,
 		notificador:   notificador,
 		ahora:         time.Now,
 	}
@@ -133,6 +136,10 @@ func (s *postulacionService) Guardar(ctx context.Context, postulanteID int64, re
 	if errRegla := validarGuardado(p, ecuadorID, s.hoy()); errRegla != nil {
 		return nil, errRegla
 	}
+	// Cada documento referenciado debe haberse subido de verdad y pertenecer a este postulante.
+	if err := s.verificarDocumentos(ctx, p); err != nil {
+		return nil, err
+	}
 	// 1.4.x El cargo elegido exige ser afiliado, jubilado o empleador según el Historial Laboral.
 	if p.CargoCodigo != "" {
 		v, err := s.verificar(ctx, p.Cedula, p.CargoCodigo)
@@ -193,11 +200,181 @@ func (s *postulacionService) Enviar(ctx context.Context, postulanteID int64, req
 	if err := s.postulaciones.MarcarEnviada(ctx, postulanteID, *p.ActualizadoEn); err != nil {
 		return nil, traducirErrorPostulacion(err)
 	}
-	// 1.10.3 El formulario se envía al correo del postulante. Si el correo falla, el envío ya quedó registrado.
-	if err := s.notificador.EnviarConfirmacion(ctx, p.Correo1, p.Codigo); err != nil {
-		log.Printf("[postulacion] no se pudo enviar el correo de confirmación de %s: %v", p.Codigo, err)
+	enviada, err := s.Obtener(ctx, postulanteID)
+	if err != nil {
+		return nil, err
 	}
-	return s.Obtener(ctx, postulanteID)
+
+	// 1.10.3 El formulario se envía al correo del postulante. Generar el PDF y hablar con el servidor SMTP
+	// puede tardar varios segundos, así que se hace en una goroutine: el postulante recibe la respuesta
+	// de inmediato. La postulación ya quedó ENVIADA en la base; si el correo falla, se registra en el log.
+	formulario, err := s.armarFormularioPDF(ctx, enviada)
+	if err != nil {
+		log.Printf("[postulacion] no se pudo generar el formulario de %s: %v", enviada.Codigo, err)
+		return enviada, nil
+	}
+	go func(p *models.Postulacion, pdf []byte) {
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutCorreo)
+		defer cancel()
+		if err := s.notificador.EnviarConfirmacion(ctx, p, pdf); err != nil {
+			log.Printf("[postulacion] no se pudo enviar el correo de confirmación de %s: %v", p.Codigo, err)
+			return
+		}
+		log.Printf("[postulacion] correo de confirmación de %s enviado a %s", p.Codigo, p.Correo1)
+	}(enviada, formulario)
+	return enviada, nil
+}
+
+func (s *postulacionService) SubirDocumento(ctx context.Context, postulanteID int64, tipo, nombre string,
+	datos []byte) (*models.DocumentoSubido, error) {
+	maximo := maxPDFRespaldo
+	switch tipo {
+	case "", "respaldo":
+	case "organizacion":
+		maximo = maxPDFOrganizacion
+	default:
+		return nil, models.ErrSolicitudInvalida("El tipo de documento debe ser \"respaldo\" u \"organizacion\"")
+	}
+	if len(datos) == 0 {
+		return nil, models.ErrSolicitudInvalida("Seleccione un archivo PDF")
+	}
+	if len(datos) > maximo {
+		return nil, models.NuevoError(http.StatusRequestEntityTooLarge, "archivo_muy_grande",
+			fmt.Sprintf("El documento supera el tamaño máximo de %d MB", maximo>>20))
+	}
+	// Se revisa el CONTENIDO, no solo la extensión: un PDF empieza con "%PDF-" y termina con "%%EOF".
+	if !esContenidoPDF(datos) {
+		return nil, models.NuevoError(http.StatusUnsupportedMediaType, "formato_no_permitido",
+			"El archivo no es un PDF válido. Solo se aceptan documentos en formato PDF")
+	}
+
+	if _, err := s.perfil(ctx, postulanteID); err != nil {
+		return nil, err
+	}
+	if p, err := s.postulaciones.BuscarPorPostulante(ctx, postulanteID); err == nil && p.Estado == "ENVIADA" {
+		return nil, models.ErrConflicto("postulacion_enviada", "Su postulación ya fue enviada y no se puede modificar.")
+	} else if err != nil && !errors.Is(err, repositories.ErrNoEncontrado) {
+		return nil, models.ErrInterno(err)
+	}
+
+	id, err := s.documentos.Guardar(ctx, postulanteID, nombre, datos)
+	if err != nil {
+		return nil, models.ErrInterno(err)
+	}
+	return &models.DocumentoSubido{ID: id, Nombre: nombreDocumento(id), Tamano: len(datos)}, nil
+}
+
+func (s *postulacionService) Documento(ctx context.Context, postulanteID int64, id string) ([]byte, error) {
+	datos, err := s.documentos.Leer(ctx, postulanteID, id)
+	if errors.Is(err, repositories.ErrNoEncontrado) {
+		return nil, models.ErrNoEncontrado("El documento no existe")
+	}
+	if err != nil {
+		return nil, models.ErrInterno(err)
+	}
+	return datos, nil
+}
+
+func (s *postulacionService) FormularioPDF(ctx context.Context, postulanteID int64) ([]byte, string, error) {
+	p, err := s.Obtener(ctx, postulanteID)
+	if err != nil {
+		return nil, "", err
+	}
+	if p.Estado == "NUEVA" {
+		return nil, "", models.NuevoError(http.StatusUnprocessableEntity, "postulacion_incompleta",
+			"Guarde su postulación antes de descargar el formulario")
+	}
+	pdf, err := s.armarFormularioPDF(ctx, p)
+	if err != nil {
+		return nil, "", err
+	}
+	return pdf, p.Codigo, nil
+}
+
+// armarFormularioPDF busca los nombres de país, provincia, cantón, cargo y preguntas, y genera el PDF.
+func (s *postulacionService) armarFormularioPDF(ctx context.Context, p *models.Postulacion) ([]byte, error) {
+	d := datosFormulario{Provincia: p.ProvinciaTexto, Ciudad: p.CiudadTexto}
+	if p.PaisID != nil {
+		paises, err := s.catalogos.ListarPaises(ctx)
+		if err != nil {
+			return nil, models.ErrInterno(err)
+		}
+		for _, x := range paises {
+			if x.ID == *p.PaisID {
+				d.Pais = x.Nombre
+			}
+		}
+		if p.ProvinciaID != nil {
+			provincias, err := s.catalogos.ListarProvincias(ctx, *p.PaisID)
+			if err != nil {
+				return nil, models.ErrInterno(err)
+			}
+			for _, x := range provincias {
+				if x.ID == *p.ProvinciaID {
+					d.Provincia = x.Nombre
+				}
+			}
+			if p.CantonID != nil {
+				cantones, err := s.catalogos.ListarCantones(ctx, *p.ProvinciaID)
+				if err != nil {
+					return nil, models.ErrInterno(err)
+				}
+				for _, x := range cantones {
+					if x.ID == *p.CantonID {
+						d.Ciudad = x.Nombre
+					}
+				}
+			}
+		}
+	}
+
+	opciones, err := s.Opciones(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range opciones.Cargos {
+		if c.Codigo == p.CargoCodigo {
+			d.Cargo = c.Nombre
+		}
+	}
+	d.Preguntas = opciones.Inhabilidades
+
+	pdf, err := generarFormularioPDF(p, d)
+	if err != nil {
+		return nil, models.ErrInterno(err)
+	}
+	return pdf, nil
+}
+
+// verificarDocumentos comprueba que cada PDF citado en la postulación exista en el almacenamiento del postulante.
+func (s *postulacionService) verificarDocumentos(ctx context.Context, p *models.Postulacion) error {
+	type ref struct{ seccion, id string }
+	var refs []ref
+	if p.OrganizacionDocumento != "" {
+		refs = append(refs, ref{"Cargo al que postula", p.OrganizacionDocumento})
+	}
+	for _, x := range p.Formacion {
+		refs = append(refs, ref{"Formación académica", x.DocumentoRespaldo})
+	}
+	for _, x := range p.Experiencia {
+		refs = append(refs, ref{"Experiencia profesional", x.DocumentoRespaldo})
+	}
+	for _, x := range p.Publicaciones {
+		refs = append(refs, ref{"Publicaciones", x.DocumentoRespaldo})
+	}
+	for _, x := range p.Capacitaciones {
+		refs = append(refs, ref{"Capacitación", x.DocumentoRespaldo})
+	}
+	for _, r := range refs {
+		existe, err := s.documentos.Existe(ctx, p.PostulanteID, r.id)
+		if err != nil {
+			return models.ErrInterno(err)
+		}
+		if !existe {
+			return errDato(r.seccion, "el documento \""+nombreDocumento(r.id)+"\" no se encuentra. Vuelva a adjuntarlo")
+		}
+	}
+	return nil
 }
 
 func (s *postulacionService) Opciones(ctx context.Context) (*models.OpcionesPostulacion, error) {
