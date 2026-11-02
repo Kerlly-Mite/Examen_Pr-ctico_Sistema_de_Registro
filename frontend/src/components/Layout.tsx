@@ -7,7 +7,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800">
-      <header className="bg-biess-800 text-white">
+      <header className="bg-biess-800 text-white print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="text-sm font-semibold tracking-wide">
             IESS · BIESS
@@ -34,7 +34,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="px-4 py-3 text-center text-xs">
+      <footer className="px-4 py-3 text-center text-xs print:hidden">
         <EstadoApi />
       </footer>
     </div>

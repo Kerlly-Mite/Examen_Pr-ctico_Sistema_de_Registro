@@ -1,4 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
+import { Cargando } from '../components/Cargando'
 import { useAuth } from '../context/useAuth'
 
 const SECTORES = [
@@ -10,7 +11,7 @@ const SECTORES = [
 export function HomePage() {
   const { estaAutenticado, cargando } = useAuth()
 
-  if (cargando) return <p className="text-center text-slate-600">Cargando...</p>
+  if (cargando) return <Cargando />
   if (estaAutenticado) return <Navigate to="/formulario" replace />
 
   return (
