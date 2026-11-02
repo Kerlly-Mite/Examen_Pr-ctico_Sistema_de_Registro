@@ -74,8 +74,8 @@ Sirve para saber si la sesión sigue vigente al recargar la página (rutas prote
 Errores: 401 `no_autorizado`.
 
 ### 5. Olvidé mi contraseña — `POST /auth/recuperar/solicitar`
-Mismo cuerpo que `verificar-identidad`. Si los datos coinciden, se "envía" un correo (**simulado**: el enlace
-aparece en la consola del backend) con el enlace `FRONTEND_URL/restablecer?token=...`.
+Mismo cuerpo que `verificar-identidad`. Si los datos coinciden, se envía un correo **real por SMTP** al correo de la
+cuenta con el enlace `FRONTEND_URL/restablecer?token=...` (si `SMTP_HOST` no está configurado, el correo se muestra en la consola del backend).
 **200** `{ "message": "Si los datos son correctos, enviaremos un correo..." }` (siempre el mismo mensaje).
 Errores: 400, 401 `informacion_incorrecta`, 429 `cuenta_bloqueada`.
 
@@ -197,7 +197,7 @@ Valores permitidos de las listas desplegables (los valida la base con `CHECK`):
 
 - Ecuador: enviar `provincia_id` y `canton_id` de los catálogos. Otro país: `provincia_texto` y `ciudad_texto`.
 - Si `tiene_familiares_iess` es `false`, la lista `familiares` se descarta. Si `respaldado_organizacion` no es `true`, se descartan los datos de la organización.
-- `documento_respaldo`: por ahora es el nombre del archivo (la subida del PDF va en una fase posterior).
+- `documento_respaldo` y `organizacion_documento`: el `id` que devuelve `POST /postulacion/documentos` (ver "Documentos PDF, formulario y correo").
 
 **Errores de `PUT /postulacion`**
 
@@ -264,9 +264,64 @@ Si `cumple` es `true`, mostrar `estado` y la `pregunta` del respaldo de organiza
 | Ya enviada | 409 `postulacion_enviada` |
 | Se guardó otro cambio mientras se enviaba (bloqueo optimista con `actualizado_en`) | 409 `postulacion_modificada` |
 
-Al enviarse, el estado pasa a `ENVIADA` (ya no se puede modificar) y se "envía" el correo de confirmación (**simulado**: aparece en la consola del backend, 1.10.3).
+Al enviarse, el estado pasa a `ENVIADA` (ya no se puede modificar) y se envía por correo (SMTP) la confirmación con el formulario en PDF adjunto (1.10.3).
 
 ### Para la sustentación
 - Las reglas están en `services/reglas_postulacion.go` como funciones puras; se prueban sin base de datos con `go test ./services/` (incluye pruebas del servicio con repositorios falsos gracias a la inyección de dependencias).
 - El Historial Laboral está detrás de la interfaz `HistorialLaboralRepository`: para usar el servicio real del IESS solo cambia la implementación en `main.go`.
 - Prueba completa contra la base: `node pruebas/probar-fase5.mjs`.
+
+## Documentos PDF, formulario y correo 🔒
+
+### Subir un PDF — `POST /postulacion/documentos`
+`multipart/form-data` con dos campos:
+- `archivo`: el PDF.
+- `tipo`: `respaldo` (formación, experiencia, publicaciones, capacitación; **máx. 2 MB**) u `organizacion` (respaldo de organización del cargo; **máx. 4 MB**).
+
+**201**
+```json
+{ "id": "9f2c...e1__titulo-maestria.pdf", "nombre": "titulo-maestria.pdf", "tamano": 48213 }
+```
+Guarda el `id` en `documento_respaldo` u `organizacion_documento` y luego haz el `PUT /postulacion`.
+Al guardar, el servidor comprueba que cada documento exista y sea de quien guarda.
+
+Ejemplo en el frontend:
+```ts
+const form = new FormData()
+form.append('archivo', archivo)            // File del <input type="file" accept="application/pdf">
+form.append('tipo', 'respaldo')
+const res = await fetch('/api/postulacion/documentos', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
+// No poner Content-Type a mano: el navegador agrega el boundary del multipart.
+```
+
+| HTTP | `error` | Cuándo |
+|---|---|---|
+| 400 | `solicitud_invalida` | Falta el campo `archivo` o el `tipo` no es válido |
+| 413 | `archivo_muy_grande` | Supera 2 MB (respaldo) o 4 MB (organización) |
+| 415 | `formato_no_permitido` | El contenido no es un PDF (se revisa la firma `%PDF-` ... `%%EOF`, no solo la extensión) |
+| 409 | `postulacion_enviada` | La postulación ya se envió |
+
+### Ver un PDF — `GET /postulacion/documentos/:id`
+Devuelve el PDF (`application/pdf`). Solo el dueño puede verlo (otro usuario recibe 404). Como la ruta pide el token,
+en el frontend se descarga con `fetch` y se abre con `URL.createObjectURL(await res.blob())`.
+
+### Formulario para imprimir — `GET /postulacion/formulario.pdf`
+Genera el formulario completo (1.1 a 1.9), el texto de autorización y declaración (1.10.1) y la línea de **firma**
+con nombres, apellidos y cédula (1.10.2). Sirve para el botón "Imprimir formulario". 422 si la postulación aún no se guarda.
+
+### Correos reales (SMTP)
+| Cuándo | Para | Contenido |
+|---|---|---|
+| `POST /auth/recuperar/solicitar` (EF-11) | Correo de la cuenta | Enlace para restablecer la contraseña (30 min) |
+| `POST /postulacion/enviar` (1.10.3) | Correo 1 del postulante | Confirmación con el **formulario en PDF adjunto** |
+
+Configuración en `.env` (ver `.env.example`): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`.
+Con Gmail: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587` y una **contraseña de aplicación** (no la contraseña normal).
+Si `SMTP_HOST` está vacío, los correos se muestran en la consola del backend (el resto del sistema funciona igual).
+El correo de confirmación se envía en segundo plano (goroutine): la respuesta del envío no espera al servidor de correo.
+
+### Para la sustentación
+- `services/correo.go`: interfaz `EnviadorCorreo` con dos implementaciones (SMTP real con STARTTLS/TLS y consola). `main.go` elige cuál según el `.env`.
+- `services/notificador_correo.go`: un solo notificador implementa la interfaz de A (`Notificador`) y la de B (`NotificadorPostulacion`).
+- `repositories/documentos_disco.go`: interfaz `DocumentoStore`; los PDF se guardan en `UPLOADS_DIR/<postulante_id>/` con nombre aleatorio (no se puede adivinar ni salir de la carpeta: protección contra *path traversal*).
+- Pruebas: `go test ./...` (incluye un servidor SMTP de prueba en memoria) y `node pruebas/probar-correo-documentos.mjs`.

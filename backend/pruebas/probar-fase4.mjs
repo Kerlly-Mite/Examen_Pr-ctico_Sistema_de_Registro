@@ -21,6 +21,16 @@ function mostrar(titulo, r, esperado) {
   console.log(`${marca} [${r.status}] ${titulo}\n      ${resumen.length > 160 ? resumen.slice(0, 160) + '...' : resumen}`)
 }
 
+// Sube un PDF REAL (mínimo válido) y devuelve el id que se guarda en documento_respaldo.
+async function subirPDF(token, nombre, tipo = 'respaldo') {
+  const pdf = new Blob(['%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n'], { type: 'application/pdf' })
+  const form = new FormData()
+  form.append('archivo', pdf, nombre)
+  form.append('tipo', tipo)
+  const res = await fetch(`${API}/postulacion/documentos`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
+  return (await res.json()).id
+}
+
 function comprobar(titulo, condicion) {
   console.log(`${condicion ? 'OK ' : 'FALLO '} ${titulo}`)
 }
@@ -33,6 +43,7 @@ if (ident.status === 200) {
 const login = await llamar('POST', '/auth/login', { cedula: '0104567896', password: 'Clave1234' })
 mostrar('Login', login, 200)
 const token = login.data?.token
+const [docExp, docTitulo, docCurso] = [await subirPDF(token, 'experiencia.pdf'), await subirPDF(token, 'titulo.pdf'), await subirPDF(token, 'curso.pdf')]
 
 console.log('\n=== Rutas protegidas y datos iniciales ===')
 mostrar('GET /postulacion sin token', await llamar('GET', '/postulacion'), 401)
@@ -50,7 +61,7 @@ const quito = (await llamar('GET', `/catalogos/provincias/${pichincha.id}/canton
 
 const experiencia = (cargo, inicio, fin) => ({
   tipo: 'DIRECCION', cargo, institucion: 'Cooperativa Andina', fecha_inicio: inicio, fecha_fin: fin,
-  actividades: 'FINANZAS', descripcion_funciones: 'Dirección financiera', documento_respaldo: 'exp.pdf',
+  actividades: 'FINANZAS', descripcion_funciones: 'Dirección financiera', documento_respaldo: docExp,
 })
 
 const valida = {
@@ -62,13 +73,13 @@ const valida = {
   cargo_codigo: 'AFILIADOS', respaldado_organizacion: false,
   formacion: [{
     nivel_instruccion: 'CUARTO_MAESTRIA', institucion: 'Universidad de Cuenca', tipo: 'NACIONAL', titulo: 'Magíster en Finanzas',
-    area_estudios: 'FINANZAS', registro_senescyt: '1005-2019-123456', fecha_registro_senescyt: '2019-08-10', documento_respaldo: 'titulo.pdf',
+    area_estudios: 'FINANZAS', registro_senescyt: '1005-2019-123456', fecha_registro_senescyt: '2019-08-10', documento_respaldo: docTitulo,
   }],
   experiencia: [experiencia('Gerente', '2015-01-01', '2019-12-31'), experiencia('Director', '2020-01-01', '2024-06-30')],
   publicaciones: [],
   capacitaciones: [{
     tipo_evento: 'CURSO', nombre_evento: 'Riesgo financiero', institucion: 'BCE', fecha_inicio: '2023-03-01',
-    fecha_fin: '2023-03-05', horas: 40, documento_respaldo: 'curso.pdf',
+    fecha_fin: '2023-03-05', horas: 40, documento_respaldo: docCurso,
   }],
   inhabilidades: [{ codigo: '1.9.1', respuesta: true }, { codigo: '1.9.2', respuesta: false }],
 }
