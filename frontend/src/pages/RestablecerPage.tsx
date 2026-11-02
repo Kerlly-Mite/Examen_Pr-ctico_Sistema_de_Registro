@@ -6,6 +6,7 @@ import { Alerta } from '../components/Alerta'
 import { Boton } from '../components/Boton'
 import { Campo } from '../components/Campo'
 import { MensajeApi } from '../components/MensajeApi'
+import { TarjetaAuth } from '../components/TarjetaAuth'
 import { useErrorApi } from '../hooks/useErrorApi'
 import { validarConfirmacion, validarPassword } from '../lib/validaciones'
 
@@ -42,28 +43,32 @@ export function RestablecerPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-lg bg-white p-6 shadow">
-      <h1 className="text-xl font-semibold">Restablecer contraseña</h1>
-
+    <TarjetaAuth
+      titulo="Restablecer contraseña"
+      subtitulo={token ? 'Escribe tu nueva contraseña.' : undefined}
+      pie={
+        <Link to="/login" className="font-medium text-biess-700 underline">
+          Volver a iniciar sesión
+        </Link>
+      }
+    >
       {!token ? (
-        <div className="mt-4 space-y-3">
+        <>
           <Alerta tipo="error">El enlace no es válido: falta el token.</Alerta>
-          <Link to="/recuperar" className="text-sm text-blue-700 underline">
+          <Link to="/recuperar" className="text-sm font-medium text-biess-700 underline">
             Solicitar un nuevo enlace
           </Link>
-        </div>
+        </>
       ) : (
         <>
-          <div className="mt-4">
-            <MensajeApi error={error} intentos={intentos} restantes={restantes} />
-            {codigo === 'enlace_invalido' && (
-              <Link to="/recuperar" className="mt-2 inline-block text-sm text-blue-700 underline">
-                Solicitar un nuevo enlace
-              </Link>
-            )}
-          </div>
+          <MensajeApi error={error} intentos={intentos} restantes={restantes} />
+          {codigo === 'enlace_invalido' && (
+            <Link to="/recuperar" className="block text-sm font-medium text-biess-700 underline">
+              Solicitar un nuevo enlace
+            </Link>
+          )}
 
-          <form onSubmit={enviar} noValidate className="mt-4 space-y-4">
+          <form onSubmit={enviar} noValidate className="space-y-4">
             <Campo
               etiqueta="Nueva contraseña"
               name="password"
@@ -89,6 +94,6 @@ export function RestablecerPage() {
           </form>
         </>
       )}
-    </section>
+    </TarjetaAuth>
   )
 }

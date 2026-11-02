@@ -17,7 +17,7 @@ export function Campo({ etiqueta, error, ayuda, id, ...resto }: Props) {
         id={idCampo}
         {...resto}
         aria-invalid={error ? true : undefined}
-        className={`mt-1 w-full rounded border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 ${
+        className={`mt-1 w-full rounded border px-3 py-2 outline-none focus:ring-2 focus:ring-oro-500 disabled:bg-slate-100 read-only:bg-slate-50 read-only:text-slate-600 ${
           error ? 'border-red-500' : 'border-slate-300'
         }`}
       />

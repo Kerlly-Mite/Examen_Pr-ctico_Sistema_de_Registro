@@ -1,12 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { Cargando } from './Cargando'
 
 export function ProtectedRoute() {
   const { estaAutenticado, cargando } = useAuth()
   const ubicacion = useLocation()
 
   if (cargando) {
-    return <p className="p-6 text-center text-slate-600">Cargando sesión...</p>
+    return <Cargando texto="Cargando sesión..." />
   }
 
   if (!estaAutenticado) {
