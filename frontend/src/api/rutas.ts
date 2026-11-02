@@ -8,4 +8,8 @@ export const RUTAS = {
   paises: '/api/catalogos/paises',
   provincias: (paisId: number) => `/api/catalogos/paises/${paisId}/provincias`,
   cantones: (provinciaId: number) => `/api/catalogos/provincias/${provinciaId}/cantones`,
+  postulacion: '/api/postulacion',
+  postulacionOpciones: '/api/postulacion/opciones',
+  postulacionEnviar: '/api/postulacion/enviar',
+  verificarCargo: (codigo: string) => `/api/postulacion/verificar-cargo/${codigo}`,
 } as const
