@@ -6,7 +6,7 @@ import { BarraGuardar } from './BarraGuardar'
 import { Campo } from './Campo'
 
 export function SeccionPersonal() {
-  const { postulacion: p, actualizar } = useFormularioListo()
+  const { postulacion: p, actualizar, bloqueo } = useFormularioListo()
   const { aviso, guardando, ejecutar, limpiar } = useGuardado()
   const pareja = requierePareja(p.estado_civil)
 
@@ -59,7 +59,9 @@ export function SeccionPersonal() {
           </div>
         )}
 
-        <BarraGuardar aviso={aviso} guardando={guardando} onGuardar={() => void ejecutar({ pendiente: pendiente() })} />
+        {!bloqueo && (
+          <BarraGuardar aviso={aviso} guardando={guardando} onGuardar={() => void ejecutar({ pendiente: pendiente() })} />
+        )}
       </div>
     </section>
   )

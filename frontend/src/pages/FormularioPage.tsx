@@ -74,7 +74,7 @@ function Contenido() {
       {bloqueo && (
         <Alerta tipo="error">
           <p className="font-medium">{bloqueo.mensaje}</p>
-          <p className="mt-1">Su postulación no puede continuar.</p>
+          
           {bloqueo.codigo === 'cargo_no_habilitado' && (
             <p className="mt-1">Si desea elegir otro cargo, recargue la página.</p>
           )}
