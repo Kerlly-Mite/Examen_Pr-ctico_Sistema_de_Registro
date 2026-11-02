@@ -6,6 +6,7 @@ import { Alerta } from '../components/Alerta'
 import { Boton } from '../components/Boton'
 import { Campo } from '../components/Campo'
 import { MensajeApi } from '../components/MensajeApi'
+import { TarjetaAuth } from '../components/TarjetaAuth'
 import { useAuth } from '../context/useAuth'
 import { useErrorApi } from '../hooks/useErrorApi'
 import { validarCedula } from '../lib/validaciones'
@@ -51,16 +52,29 @@ export function LoginPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-lg bg-white p-6 shadow">
-      <h1 className="text-xl font-semibold">Iniciar sesión</h1>
-      <p className="mt-1 text-sm text-slate-600">Ingrese con su cédula y contraseña.</p>
+    <TarjetaAuth
+      titulo="Iniciar sesión"
+      subtitulo="Ingresa con tu cédula y contraseña."
+      pie={
+        <div className="space-y-2">
+          <p>
+            <Link to="/recuperar" className="font-medium text-biess-700 underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+          <p>
+            ¿No tienes cuenta?{' '}
+            <Link to="/registro" className="font-medium text-biess-700 underline">
+              Regístrate
+            </Link>
+          </p>
+        </div>
+      }
+    >
+      {estado?.mensaje && <Alerta tipo="exito">{estado.mensaje}</Alerta>}
+      <MensajeApi error={error} intentos={intentos} restantes={restantes} />
 
-      <div className="mt-4 space-y-3">
-        {estado?.mensaje && <Alerta tipo="exito">{estado.mensaje}</Alerta>}
-        <MensajeApi error={error} intentos={intentos} restantes={restantes} />
-      </div>
-
-      <form onSubmit={enviar} noValidate className="mt-4 space-y-4">
+      <form onSubmit={enviar} noValidate className="space-y-4">
         <Campo
           etiqueta="Cédula"
           name="cedula"
@@ -86,15 +100,6 @@ export function LoginPage() {
           Ingresar
         </Boton>
       </form>
-
-      <div className="mt-4 flex justify-between text-sm">
-        <Link to="/recuperar" className="text-biess-700 underline">
-          ¿Olvidaste tu contraseña?
-        </Link>
-        <Link to="/registro" className="text-biess-700 underline">
-          Registrarse
-        </Link>
-      </div>
-    </section>
+    </TarjetaAuth>
   )
 }

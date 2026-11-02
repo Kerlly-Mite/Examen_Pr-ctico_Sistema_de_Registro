@@ -10,6 +10,7 @@ import { Campo } from '../components/Campo'
 import { FormularioIdentidad } from '../components/FormularioIdentidad'
 import { MensajeApi } from '../components/MensajeApi'
 import { PasosRegistro } from '../components/PasosRegistro'
+import { TarjetaAuth } from '../components/TarjetaAuth'
 import { useErrorApi } from '../hooks/useErrorApi'
 import { validarConfirmacion, validarCorreo, validarPassword } from '../lib/validaciones'
 import type { VerificarIdentidadRespuesta } from '../types/api'
@@ -73,30 +74,37 @@ export function RegistroPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-lg bg-white p-6 shadow">
-      <PasosRegistro paso={paso} />
-      <h1 className="mt-3 text-xl font-semibold text-biess-800">Crear cuenta</h1>
-
-      <div className="mt-4">
-        <MensajeApi error={error} intentos={intentos} restantes={restantes} />
-      </div>
+    <TarjetaAuth
+      cabecera={<PasosRegistro paso={paso} />}
+      titulo="Crear cuenta"
+      pie={
+        <>
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="font-medium text-biess-700 underline">
+            Iniciar sesión
+          </Link>
+        </>
+      }
+    >
+      <MensajeApi error={error} intentos={intentos} restantes={restantes} />
 
       {paso === 1 && (
-        <div className="mt-4">
-          <FormularioIdentidad
-            textoBoton="Continuar"
-            enviando={enviando}
-            deshabilitado={bloqueado}
-            onEnviar={verificar}
-          />
-        </div>
+        <FormularioIdentidad
+          textoBoton="Continuar"
+          enviando={enviando}
+          deshabilitado={bloqueado}
+          onEnviar={verificar}
+        />
       )}
 
       {paso === 2 && verificacion && (
-        <form onSubmit={crearCuenta} noValidate className="mt-4 space-y-4">
+        <form onSubmit={crearCuenta} noValidate className="space-y-4">
           <Alerta tipo="exito">
-            Identidad verificada: <strong>{verificacion.nombres} {verificacion.apellidos}</strong>.
-            Tiene {Math.round(verificacion.expira_en_segundos / 60)} minutos para completar el registro.
+            Identidad verificada:{' '}
+            <strong>
+              {verificacion.nombres} {verificacion.apellidos}
+            </strong>
+            . Tienes {Math.round(verificacion.expira_en_segundos / 60)} minutos para completar el registro.
           </Alerta>
           <Campo
             etiqueta="Correo electrónico"
@@ -131,13 +139,6 @@ export function RegistroPage() {
           </Boton>
         </form>
       )}
-
-      <p className="mt-4 text-sm">
-        ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="text-biess-700 underline">
-          Inicie sesión
-        </Link>
-      </p>
-    </section>
+    </TarjetaAuth>
   )
 }

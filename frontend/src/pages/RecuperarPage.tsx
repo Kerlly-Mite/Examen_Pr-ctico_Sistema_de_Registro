@@ -5,6 +5,7 @@ import type { PruebaIdentidad } from '../api/auth'
 import { Alerta } from '../components/Alerta'
 import { FormularioIdentidad } from '../components/FormularioIdentidad'
 import { MensajeApi } from '../components/MensajeApi'
+import { TarjetaAuth } from '../components/TarjetaAuth'
 import { useErrorApi } from '../hooks/useErrorApi'
 
 export function RecuperarPage() {
@@ -26,33 +27,26 @@ export function RecuperarPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-lg bg-white p-6 shadow">
-      <h1 className="text-xl font-semibold">Recuperar contraseña</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Compruebe su identidad y le enviaremos un enlace a su correo.
-      </p>
-
-      <div className="mt-4 space-y-3">
-        <MensajeApi error={error} intentos={intentos} restantes={restantes} />
-        {exito && <Alerta tipo="exito">{exito}</Alerta>}
-      </div>
-
-      {!exito && (
-        <div className="mt-4">
-          <FormularioIdentidad
-            textoBoton="Enviar enlace"
-            enviando={enviando}
-            deshabilitado={bloqueado}
-            onEnviar={solicitar}
-          />
-        </div>
-      )}
-
-      <p className="mt-4 text-sm">
-        <Link to="/login" className="text-biess-700 underline">
+    <TarjetaAuth
+      titulo="Recuperar contraseña"
+      subtitulo="Comprueba tu identidad y te enviaremos un enlace a tu correo."
+      pie={
+        <Link to="/login" className="font-medium text-biess-700 underline">
           Volver a iniciar sesión
         </Link>
-      </p>
-    </section>
+      }
+    >
+      <MensajeApi error={error} intentos={intentos} restantes={restantes} />
+      {exito && <Alerta tipo="exito">{exito}</Alerta>}
+
+      {!exito && (
+        <FormularioIdentidad
+          textoBoton="Enviar enlace"
+          enviando={enviando}
+          deshabilitado={bloqueado}
+          onEnviar={solicitar}
+        />
+      )}
+    </TarjetaAuth>
   )
 }
