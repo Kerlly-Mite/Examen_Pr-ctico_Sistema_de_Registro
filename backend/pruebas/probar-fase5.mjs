@@ -22,6 +22,16 @@ function mostrar(titulo, r, esperado) {
   console.log(`${marca} [${r.status}] ${titulo}\n      ${resumen.length > 160 ? resumen.slice(0, 160) + '...' : resumen}`)
 }
 
+// Sube un PDF REAL (mínimo válido) y devuelve el id que se guarda en documento_respaldo.
+async function subirPDF(token, nombre, tipo = 'respaldo') {
+  const pdf = new Blob(['%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n'], { type: 'application/pdf' })
+  const form = new FormData()
+  form.append('archivo', pdf, nombre)
+  form.append('tipo', tipo)
+  const res = await fetch(`${API}/postulacion/documentos`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
+  return (await res.json()).id
+}
+
 function comprobar(titulo, condicion) {
   console.log(`${condicion ? 'OK ' : 'FALLO '} ${titulo}`)
 }
@@ -71,17 +81,18 @@ comprobar(`Verificar EMPLEADORES: "${empleador.data?.estado}"`, empleador.data?.
 
 console.log('\n=== Flujo completo: 2403456789 (LUCIA, jubilada) ===')
 const tLucia = await sesion('2403456789', '1000000003', 'lucia@correo.com')
+const [docExp, docOrg] = [await subirPDF(tLucia, 'experiencia.pdf'), await subirPDF(tLucia, 'respaldo-federacion.pdf', 'organizacion')]
 const opciones = (await llamar('GET', '/postulacion/opciones', null, tLucia)).data
 const habilitantes = opciones.inhabilidades.map((q) => ({ codigo: q.codigo, respuesta: q.respuesta_habilitante }))
 
 const experiencia = (cargo, inicio, fin) => ({
   tipo: 'DIRECCION', cargo, institucion: 'Banco del Pacífico', fecha_inicio: inicio, fecha_fin: fin,
-  actividades: 'FINANZAS', descripcion_funciones: 'Gestión financiera', documento_respaldo: 'exp.pdf',
+  actividades: 'FINANZAS', descripcion_funciones: 'Gestión financiera', documento_respaldo: docExp,
 })
 const lucia = {
   ...domicilio,
   cargo_codigo: 'JUBILADOS', respaldado_organizacion: true,
-  organizacion_nombre: 'Federación Nacional de Jubilados', organizacion_documento: 'respaldo.pdf',
+  organizacion_nombre: 'Federación Nacional de Jubilados', organizacion_documento: docOrg,
   experiencia: [experiencia('Gerente', '2015-01-01', '2019-12-31'), experiencia('Asesora', '2018-01-01', '2020-12-31')],
   inhabilidades: habilitantes.slice(0, 5), // aún no responde todas
 }
@@ -104,7 +115,7 @@ mostrar('Enviar con una inhabilidad (1.9.8 deudas con el SRI)', await llamar('PO
 
 await llamar('PUT', '/postulacion', { ...lucia, inhabilidades: habilitantes }, tLucia)
 const enviada = await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia)
-mostrar('Enviar postulación completa (mira el correo simulado en la consola del backend)', enviada, 200)
+mostrar('Enviar postulación completa (llega por correo con el formulario PDF adjunto)', enviada, 200)
 comprobar(`Estado ${enviada.data?.estado}, código ${enviada.data?.codigo}`, enviada.data?.estado === 'ENVIADA' && enviada.data?.enviada_en)
 mostrar('Modificar una postulación ya enviada', await llamar('PUT', '/postulacion', lucia, tLucia), 409)
 mostrar('Enviarla otra vez', await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia), 409)

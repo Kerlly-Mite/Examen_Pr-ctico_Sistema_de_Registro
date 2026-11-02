@@ -5,6 +5,7 @@ package services
 // Por eso se prueban con tests unitarios sin levantar Docker (reglas_postulacion_test.go).
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -128,6 +129,16 @@ func exigir(seccion string, i int, campos ...campo) *models.AppError {
 		}
 	}
 	return nil
+}
+
+// esContenidoPDF revisa la "firma" del archivo: todo PDF empieza con "%PDF-" y termina con "%%EOF".
+// Así no se acepta, por ejemplo, un .exe o un .docx renombrado a .pdf.
+func esContenidoPDF(datos []byte) bool {
+	final := datos
+	if len(final) > 2048 {
+		final = final[len(final)-2048:]
+	}
+	return bytes.HasPrefix(datos, []byte("%PDF-")) && bytes.Contains(final, []byte("%%EOF"))
 }
 
 // esPDF: los documentos de respaldo se aceptan solo en formato PDF.

@@ -46,4 +46,7 @@ func Registrar(app *fiber.App, d Dependencias) {
 	post.Get("/opciones", d.Postulacion.Opciones)
 	post.Get("/verificar-cargo/:codigo", d.Postulacion.VerificarCargo)
 	post.Post("/enviar", d.Postulacion.Enviar)
+	post.Get("/formulario.pdf", d.Postulacion.FormularioPDF)
+	post.Post("/documentos", d.Postulacion.SubirDocumento)
+	post.Get("/documentos/:id", d.Postulacion.Documento)
 }

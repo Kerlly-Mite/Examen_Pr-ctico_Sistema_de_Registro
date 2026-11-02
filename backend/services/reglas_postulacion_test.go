@@ -252,9 +252,11 @@ func (fakeCatalogos) ListarPaises(context.Context) ([]models.Pais, error) {
 	return []models.Pais{{ID: ecuadorPrueba, Nombre: "Ecuador"}}, nil
 }
 
+type fakeDocumentos struct{ repositories.DocumentoStore }
+
 func nuevoServicioPrueba(repo *fakePostulaciones) PostulacionService {
 	return NewPostulacionService(repo, fakePostulantes{}, fakeRegistro{}, fakeHistorial{}, fakeCatalogos{},
-		NewNotificadorPostulacionConsola())
+		fakeDocumentos{}, NewNotificadorCorreo(enviadorConsola{}))
 }
 
 func TestServicioRechazaExtranjeroSinGuardar(t *testing.T) {

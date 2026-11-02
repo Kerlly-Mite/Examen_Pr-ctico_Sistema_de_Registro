@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"io"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 
 	"biess-backend/middleware"
@@ -65,6 +68,67 @@ func (h *PostulacionHandler) Enviar(c *fiber.Ctx) error {
 		return responderError(c, err)
 	}
 	return c.JSON(p)
+}
+
+// SubirDocumento responde POST /api/postulacion/documentos (multipart/form-data):
+// campo "archivo" (el PDF) y campo "tipo" ("respaldo" u "organizacion").
+func (h *PostulacionHandler) SubirDocumento(c *fiber.Ctx) error {
+	id, _ := c.Locals(middleware.LocalPostulanteID).(int64)
+	archivo, err := c.FormFile("archivo")
+	if err != nil {
+		return responderError(c, models.ErrSolicitudInvalida("Adjunte el PDF en el campo \"archivo\""))
+	}
+	f, err := archivo.Open()
+	if err != nil {
+		return responderError(c, models.ErrInterno(err))
+	}
+	defer f.Close()
+	// Se lee como máximo 1 byte más que el límite mayor: si llega a ese tamaño, el service lo rechaza.
+	datos, err := io.ReadAll(io.LimitReader(f, 4<<20+1))
+	if err != nil {
+		return responderError(c, models.ErrInterno(err))
+	}
+	doc, err := h.svc.SubirDocumento(c.UserContext(), id, c.FormValue("tipo"), archivo.Filename, datos)
+	if err != nil {
+		return responderError(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(doc)
+}
+
+// Documento responde GET /api/postulacion/documentos/:id: descarga un PDF propio.
+func (h *PostulacionHandler) Documento(c *fiber.Ctx) error {
+	id, _ := c.Locals(middleware.LocalPostulanteID).(int64)
+	docID := c.Params("id")
+	datos, err := h.svc.Documento(c.UserContext(), id, docID)
+	if err != nil {
+		return responderError(c, err)
+	}
+	return enviarPDF(c, datos, nombreArchivo(docID))
+}
+
+// FormularioPDF responde GET /api/postulacion/formulario.pdf: el formulario para imprimir y firmar (1.10.2).
+func (h *PostulacionHandler) FormularioPDF(c *fiber.Ctx) error {
+	id, _ := c.Locals(middleware.LocalPostulanteID).(int64)
+	datos, codigo, err := h.svc.FormularioPDF(c.UserContext(), id)
+	if err != nil {
+		return responderError(c, err)
+	}
+	return enviarPDF(c, datos, "Formulario-"+codigo+".pdf")
+}
+
+func enviarPDF(c *fiber.Ctx, datos []byte, nombre string) error {
+	c.Set(fiber.HeaderContentType, "application/pdf")
+	c.Set(fiber.HeaderContentDisposition, `inline; filename="`+nombre+`"`)
+	c.Set("X-Content-Type-Options", "nosniff")
+	return c.Send(datos)
+}
+
+// nombreArchivo quita el prefijo aleatorio del id ("<aleatorio>__nombre.pdf" -> "nombre.pdf").
+func nombreArchivo(id string) string {
+	if i := strings.Index(id, "__"); i >= 0 {
+		return id[i+2:]
+	}
+	return id
 }
 
 // Opciones responde GET /api/postulacion/opciones: cargos y preguntas de inhabilidades.
