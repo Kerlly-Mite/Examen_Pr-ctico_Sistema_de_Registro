@@ -113,7 +113,17 @@ const conInhabilidad = habilitantes.map((r) => (r.codigo === '1.9.8' ? { ...r, r
 await llamar('PUT', '/postulacion', { ...lucia, inhabilidades: conInhabilidad }, tLucia)
 mostrar('Enviar con una inhabilidad (1.9.8 deudas con el SRI)', await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia), 403)
 
-await llamar('PUT', '/postulacion', { ...lucia, inhabilidades: habilitantes }, tLucia)
+const p197 = opciones.inhabilidades.find((q) => q.codigo === '1.9.7')
+comprobar(`1.9.7 no impide postular (impide_postular=${p197?.impide_postular}); las otras 12 sí`,
+  p197?.impide_postular === false && opciones.inhabilidades.filter((q) => q.impide_postular).length === 12)
+// 1.9.7 "Sí": se registran los datos de la remoción, que constarán en el formulario final, y la postulación sí se envía.
+const removida = habilitantes.map((r) => (r.codigo === '1.9.7'
+  ? { ...r, respuesta: true, remocion_institucion: 'Superintendencia de Bancos', remocion_cargo: 'Gerente',
+      remocion_fecha_fin: '2023-05-31', remocion_motivo: 'Reestructuración institucional' }
+  : r))
+mostrar('1.9.7 "Sí" sin la institución ni el motivo', await llamar('PUT', '/postulacion',
+  { ...lucia, inhabilidades: removida.map((r) => (r.codigo === '1.9.7' ? { codigo: r.codigo, respuesta: true } : r)) }, tLucia), 400)
+mostrar('1.9.7 "Sí" con los datos de la remoción', await llamar('PUT', '/postulacion', { ...lucia, inhabilidades: removida }, tLucia), 200)
 const enviada = await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia)
 mostrar('Enviar postulación completa (llega por correo con el formulario PDF adjunto)', enviada, 200)
 comprobar(`Estado ${enviada.data?.estado}, código ${enviada.data?.codigo}`, enviada.data?.estado === 'ENVIADA' && enviada.data?.enviada_en)
