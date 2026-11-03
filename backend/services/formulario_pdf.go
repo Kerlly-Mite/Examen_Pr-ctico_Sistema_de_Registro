@@ -348,6 +348,7 @@ func (f *formularioPDF) tablaInhabilidades(p *models.Postulacion, preguntas []mo
 		if pdf.GetY()+alto > altoPagina-margenInf {
 			pdf.AddPage()
 			cabecera()
+			pdf.SetFont("Helvetica", "", 8) // la cabecera deja la fuente en negrita
 		}
 		y := pdf.GetY()
 		if i%2 == 1 {
@@ -372,7 +373,7 @@ func (f *formularioPDF) tablaInhabilidades(p *models.Postulacion, preguntas []mo
 			resp = siNo(r.Respuesta)
 		}
 		pdf.SetFont("Helvetica", "B", 8.5)
-		if !ok || r.Respuesta != q.RespuestaHabilitante {
+		if !ok || (q.ImpidePostular && r.Respuesta != q.RespuestaHabilitante) {
 			f.texto(colRojo) // resalta lo que impediría postular
 		}
 		pdf.SetXY(margen+wNum+wPreg, y)
