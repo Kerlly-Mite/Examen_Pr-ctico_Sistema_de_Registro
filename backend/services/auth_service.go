@@ -291,7 +291,7 @@ func (s *authService) validarIdentidad(ctx context.Context, contexto string, req
 		fechaIngresada = t
 	}
 	if dactilar != "" && !reDactilar.MatchString(dactilar) {
-		return nil, models.ErrSolicitudInvalida("El código dactilar debe tener 10 dígitos")
+		return nil, models.ErrSolicitudInvalida("El código dactilar debe tener 10 caracteres (letras y números)")
 	}
 
 	// 2) ¿Hay un bloqueo vigente? Aunque los datos sean correctos, no se deja continuar.
@@ -311,7 +311,7 @@ func (s *authService) validarIdentidad(ctx context.Context, contexto string, req
 		coincide = rc.FechaExpedicion.Format(layoutFecha) == fechaIngresada.Format(layoutFecha)
 	}
 	if coincide && dactilar != "" {
-		coincide = rc.CodigoDactilar == dactilar
+		coincide = strings.EqualFold(strings.TrimSpace(rc.CodigoDactilar), dactilar)
 	}
 	if !coincide {
 		return nil, s.registrarFallo(ctx, contexto, cedula, "informacion_incorrecta", "La información ingresada es incorrecta")

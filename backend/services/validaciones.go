@@ -11,7 +11,7 @@ import (
 	"biess-backend/models"
 )
 
-var reDactilar = regexp.MustCompile(`^[0-9]{10}$`)
+var reDactilar = regexp.MustCompile(`^[A-Za-z0-9]{10}$`)
 
 // CedulaValida verifica una cédula ecuatoriana: 10 dígitos, provincia 01-24 (o 30), tercer dígito < 6
 // y dígito verificador por el algoritmo módulo 10.
