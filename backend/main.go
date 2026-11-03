@@ -121,6 +121,8 @@ func main() {
 		AppName: "BIESS Postulación API",
 		// Los PDF de organización pueden pesar hasta 4 MB (más la cabecera multipart). El límite exacto lo valida el service.
 		BodyLimit: 5 << 20,
+		// Errores propios de Fiber (404, 405) en el mismo JSON {error, message} que el resto de la API.
+		ErrorHandler: handlers.ManejadorErrores,
 	})
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
