@@ -73,7 +73,7 @@ async function peticion<T>(metodo: string, ruta: string, cuerpo?: unknown): Prom
     })
   }
 
-  let datos: unknown = null
+  let datos: unknown
   try {
     datos = await respuesta.json()
   } catch {
