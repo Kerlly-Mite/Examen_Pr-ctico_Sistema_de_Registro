@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"biess-backend/models"
+	"biess-backend/repositories"
 )
 
 // servidorSMTPPrueba es un servidor SMTP mínimo en memoria: habla el protocolo de verdad (EHLO, AUTH, MAIL,
@@ -155,5 +156,34 @@ func TestFormularioPDFSeGenera(t *testing.T) {
 	}
 	if !esContenidoPDF(pdf) || len(pdf) < 1500 {
 		t.Errorf("el formulario generado no es un PDF válido (%d bytes)", len(pdf))
+	}
+}
+
+func TestEspacioUsadoCuentaSoloDocumentosVigentes(t *testing.T) {
+	ahora := time.Now()
+	docs := []repositories.DocumentoInfo{
+		{ID: "guardado", Tamano: 10 << 20, Modificado: ahora.Add(-72 * time.Hour)},    // en la postulación: cuenta
+		{ID: "recien-subido", Tamano: 3 << 20, Modificado: ahora.Add(-time.Hour)},     // aún sin guardar: cuenta
+		{ID: "reemplazado", Tamano: 20 << 20, Modificado: ahora.Add(-48 * time.Hour)}, // quitado hace días: no cuenta
+	}
+	if got := espacioUsado(docs, map[string]bool{"guardado": true}, ahora); got != 13<<20 {
+		t.Errorf("espacio usado = %d MB, se esperaban 13 MB", got>>20)
+	}
+}
+
+// documentosLlenos simula un postulante que ya tiene 49 MB de documentos en su carpeta.
+type documentosLlenos struct{ repositories.DocumentoStore }
+
+func (documentosLlenos) Listar(context.Context, int64) ([]repositories.DocumentoInfo, error) {
+	return []repositories.DocumentoInfo{{ID: "previo", Tamano: 49 << 20, Modificado: time.Now()}}, nil
+}
+
+func TestSubirDocumentoRespetaElMaximoDe50MB(t *testing.T) {
+	svc := NewPostulacionService(&fakePostulaciones{}, fakePostulantes{}, fakeRegistro{}, fakeHistorial{},
+		fakeCatalogos{}, documentosLlenos{}, NewNotificadorCorreo(enviadorConsola{}))
+	pdf := []byte("%PDF-1.4\n" + strings.Repeat("x", 3<<20/2) + "\n%%EOF\n") // 1.5 MB: 49 + 1.5 > 50
+	_, err := svc.SubirDocumento(context.Background(), 1, "respaldo", "titulo.pdf", pdf)
+	if ae, ok := models.EsAppError(err); !ok || ae.Code != "limite_documentos" || ae.Status != 413 {
+		t.Fatalf("se esperaba 413 limite_documentos, se obtuvo %v", err)
 	}
 }

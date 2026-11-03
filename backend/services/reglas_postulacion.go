@@ -15,11 +15,15 @@ import (
 	"unicode/utf8"
 
 	"biess-backend/models"
+	"biess-backend/repositories"
 )
 
 const (
 	codigoPreguntaRemocion  = "1.9.7" // única pregunta con datos adicionales si la respuesta es "Sí"
 	maxDescripcionFunciones = 1000    // 1.6.7: máximo 1000 caracteres
+
+	maxDocumentosPostulante     = 50 << 20       // EF-1, Restricciones: máximo 50 MB por postulante
+	vigenciaDocumentoSinGuardar = 24 * time.Hour // un PDF subido y aún no guardado sigue contando un día
 )
 
 var reTelefono = regexp.MustCompile(`^\+?[0-9]{7,15}$`)
@@ -139,6 +143,19 @@ func esContenidoPDF(datos []byte) bool {
 		final = final[len(final)-2048:]
 	}
 	return bytes.HasPrefix(datos, []byte("%PDF-")) && bytes.Contains(final, []byte("%%EOF"))
+}
+
+// espacioUsado suma lo que ocupan los documentos del postulante para el máximo de 50 MB (EF-1, Restricciones).
+// Cuenta los que están en su postulación guardada y los subidos en las últimas 24 horas (aún sin guardar);
+// los que quitó o reemplazó hace más de un día ya no le restan espacio.
+func espacioUsado(docs []repositories.DocumentoInfo, enPostulacion map[string]bool, ahora time.Time) int64 {
+	var total int64
+	for _, d := range docs {
+		if enPostulacion[d.ID] || ahora.Sub(d.Modificado) < vigenciaDocumentoSinGuardar {
+			total += d.Tamano
+		}
+	}
+	return total
 }
 
 // esPDF: los documentos de respaldo se aceptan solo en formato PDF.
