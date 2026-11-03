@@ -346,6 +346,15 @@ func validarDomicilio(p *models.Postulacion, ecuadorID int) *models.AppError {
 	return nil
 }
 
+// marcarImpedimentos indica qué preguntas de 1.9 bloquean el envío con la respuesta no habilitante.
+// Todas lo hacen salvo 1.9.7: el requerimiento pide registrar institución, cargo, fecha y motivo de la remoción
+// "lo cual constará en el formulario final", así que esa respuesta se guarda y la evalúa la Comisión de Selección.
+func marcarImpedimentos(preguntas []models.PreguntaInhabilidad) {
+	for i := range preguntas {
+		preguntas[i].ImpidePostular = preguntas[i].Codigo != codigoPreguntaRemocion
+	}
+}
+
 // validarInhabilidades (1.9): no se repiten preguntas y, si respondió "Sí" a 1.9.7, son obligatorios
 // la institución y el motivo de finalización (*).
 func validarInhabilidades(p *models.Postulacion, hoy time.Time) *models.AppError {
@@ -411,7 +420,7 @@ func validarEnvio(p *models.Postulacion, ecuadorID int, preguntas []models.Pregu
 		return errIncompleta("Cargo al que postula", "responda si está respaldado por una organización")
 	}
 
-	// 1.9: todas las preguntas respondidas y con la respuesta habilitante.
+	// 1.9: todas las preguntas respondidas y, en las que impiden postular, con la respuesta habilitante.
 	respuestas := map[string]bool{}
 	for _, r := range p.Inhabilidades {
 		respuestas[r.Codigo] = r.Respuesta
@@ -422,7 +431,7 @@ func validarEnvio(p *models.Postulacion, ecuadorID int, preguntas []models.Pregu
 		switch {
 		case !ok:
 			faltan = append(faltan, q.Codigo)
-		case r != q.RespuestaHabilitante:
+		case q.ImpidePostular && r != q.RespuestaHabilitante:
 			inhabilitan = append(inhabilitan, q.Codigo)
 		}
 	}

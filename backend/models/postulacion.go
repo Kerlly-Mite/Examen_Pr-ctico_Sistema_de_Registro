@@ -224,10 +224,13 @@ type Cargo struct {
 }
 
 // PreguntaInhabilidad es una pregunta de 1.9. RespuestaHabilitante es la respuesta con la que SÍ puede postular.
+// ImpidePostular indica si la otra respuesta bloquea el envío: es falso en 1.9.7, cuya respuesta "Sí" solo se
+// registra con sus datos para que conste en el formulario final y la evalúe la Comisión de Selección.
 type PreguntaInhabilidad struct {
 	Codigo               string `json:"codigo"`
 	Texto                string `json:"texto"`
 	RespuestaHabilitante bool   `json:"respuesta_habilitante"`
+	ImpidePostular       bool   `json:"impide_postular"`
 }
 
 // OpcionesPostulacion agrupa los catálogos propios del formulario (cargos y preguntas de inhabilidades).
