@@ -8,7 +8,7 @@ export function validarCedula(v: string): string | undefined {
 
 export function validarCodigoDactilar(v: string): string | undefined {
   if (v.trim() === '') return 'Ingrese su código dactilar'
-  if (!/^\d{10}$/.test(v)) return 'El código dactilar debe tener 10 dígitos'
+  if (!/^[A-Za-z0-9]{10}$/.test(v)) return 'El código dactilar debe tener 10 caracteres (letras y números, ej. E3333I1222)'
   return undefined
 }
 
