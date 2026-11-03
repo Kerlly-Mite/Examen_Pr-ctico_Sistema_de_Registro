@@ -1,4 +1,4 @@
-import { ApiError, obtenerToken } from './client'
+import { ApiError, errorDeRed, obtenerToken, TIEMPO_LIMITE_ARCHIVOS_MS } from './client'
 
 export type TipoDocumento = 'respaldo' | 'organizacion'
 
@@ -30,12 +30,10 @@ async function pedir(ruta: string, init: RequestInit): Promise<Response> {
 
   let respuesta: Response
   try {
-    respuesta = await fetch(ruta, { ...init, headers })
-  } catch {
-    throw new ApiError(0, {
-      error: 'sin_conexion',
-      message: 'No se pudo conectar con el servidor. Intente nuevamente.',
-    })
+    // Los PDF pueden tardar más que una petición normal: se les da un tiempo límite mayor
+    respuesta = await fetch(ruta, { ...init, headers, signal: AbortSignal.timeout(TIEMPO_LIMITE_ARCHIVOS_MS) })
+  } catch (err) {
+    throw errorDeRed(err)
   }
   if (!respuesta.ok) throw await leerError(respuesta)
   return respuesta
