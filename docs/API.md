@@ -20,10 +20,15 @@ El frontend debe decidir QUÉ HACER según `error` (código estable) y mostrar `
 | 401 | `credenciales_incorrectas` | Cédula o contraseña incorrectas en el login | `intentos_restantes` |
 | 401 | `no_autorizado` | Falta el token JWT, es inválido o expiró | — |
 | 404 | `no_encontrado` | Recurso inexistente (p. ej. país o provincia) | — |
+| 404 | `ruta_no_encontrada` | La ruta de la API no existe | — |
+| 405 | `metodo_no_permitido` | Método HTTP no permitido en la ruta | — |
 | 409 | `cedula_registrada` | La cédula ya tiene cuenta | — |
 | 409 | `correo_registrado` | El correo ya está en uso | — |
 | 429 | `cuenta_bloqueada` | 3 intentos fallidos consecutivos: bloqueo de 10 min | `segundos_restantes` |
 | 500 | `error_interno` | Error inesperado | — |
+
+**Todas** las respuestas de error tienen la forma `{ "error": "<código>", "message": "<texto>" }`, incluso las que
+genera Fiber antes de llegar a un handler (rutas inexistentes o métodos no permitidos).
 
 Mensajes del documento funcional (EF-11): `"La información ingresada es incorrecta"`,
 `"Registro fallido, inténtelo nuevamente en 10 minutos"`, `"Sus credenciales de ingreso son incorrectas"`.
