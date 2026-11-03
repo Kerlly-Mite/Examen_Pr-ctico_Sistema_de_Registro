@@ -7,6 +7,7 @@ import { FORMACION_VACIA, validarFormacion } from '../lib/secciones'
 import type { Formacion } from '../types/postulacion'
 import { BarraGuardar } from './BarraGuardar'
 import { Campo } from './Campo'
+import { nombreDocumento } from '../api/documentos'
 import { CampoArchivo } from './CampoArchivo'
 import { PanelLista } from './PanelLista'
 import { SelectorTexto } from './SelectorTexto'
@@ -49,7 +50,7 @@ export function SeccionFormacion() {
               <p className="text-slate-600">
                 {etiquetaDe(NIVELES, f.nivel_instruccion)} · {f.institucion} ({etiquetaDe(TIPOS_INSTITUCION, f.tipo)}) ·{' '}
                 {etiquetaDe(AREAS, f.area_estudios)} · SENESCYT {f.registro_senescyt} (
-                {formatearFecha(f.fecha_registro_senescyt)}) · PDF: {f.documento_respaldo}
+                {formatearFecha(f.fecha_registro_senescyt)}) · PDF: {nombreDocumento(f.documento_respaldo)}
               </p>
             </>
           )}

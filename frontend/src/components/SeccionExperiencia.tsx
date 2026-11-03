@@ -9,6 +9,7 @@ import type { Duracion, Experiencia } from '../types/postulacion'
 import { AreaTexto } from './AreaTexto'
 import { BarraGuardar } from './BarraGuardar'
 import { Campo } from './Campo'
+import { nombreDocumento } from '../api/documentos'
 import { CampoArchivo } from './CampoArchivo'
 import { PanelLista } from './PanelLista'
 import { SelectorTexto } from './SelectorTexto'
@@ -65,7 +66,7 @@ export function SeccionExperiencia() {
               </p>
               <p className="text-slate-600">
                 Tiempo: {textoDuracion(e.duracion, e.fecha_inicio, e.fecha_fin) ?? 'no calculable'} · PDF:{' '}
-                {e.documento_respaldo}
+                {nombreDocumento(e.documento_respaldo)}
               </p>
             </>
           )}
