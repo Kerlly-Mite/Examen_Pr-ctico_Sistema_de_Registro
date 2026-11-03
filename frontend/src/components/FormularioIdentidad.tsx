@@ -74,12 +74,14 @@ export function FormularioIdentidad({ textoBoton, enviando, deshabilitado, onEnv
         />
       ) : (
         <Campo
-          etiqueta="Código dactilar (10 dígitos)"
+          etiqueta="Código dactilar (10 caracteres, ej. E3333I1222)"
           name="codigo_dactilar"
-          inputMode="numeric"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoComplete="off"
           maxLength={10}
           value={codigo}
-          onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+          onChange={(e) => setCodigo(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
           error={errores.prueba}
           disabled={deshabilitado}
         />
