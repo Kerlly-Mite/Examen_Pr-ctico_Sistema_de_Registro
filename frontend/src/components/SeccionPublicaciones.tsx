@@ -8,6 +8,7 @@ import { PUBLICACION_VACIA, validarPublicacion } from '../lib/secciones'
 import type { Publicacion } from '../types/postulacion'
 import { BarraGuardar } from './BarraGuardar'
 import { Campo } from './Campo'
+import { nombreDocumento } from '../api/documentos'
 import { CampoArchivo } from './CampoArchivo'
 import { GrupoSiNo } from './GrupoSiNo'
 import { PanelLista } from './PanelLista'
@@ -76,7 +77,7 @@ export function SeccionPublicaciones() {
                 <p className="text-slate-600">
                   {etiquetaDe(TIPOS_PUBLICACION, x.tipo)} · {x.medio_publicacion} ·{' '}
                   {formatearFecha(x.fecha_publicacion)} · Relacionada con su campo:{' '}
-                  {x.relacionada_formacion ? 'Sí' : 'No'} · PDF: {x.documento_respaldo}
+                  {x.relacionada_formacion ? 'Sí' : 'No'} · PDF: {nombreDocumento(x.documento_respaldo)}
                 </p>
               </>
             )}

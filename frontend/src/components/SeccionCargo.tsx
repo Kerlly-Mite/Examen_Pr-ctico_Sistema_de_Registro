@@ -106,7 +106,7 @@ export function SeccionCargo() {
                 <CampoArchivo
                   etiqueta="Documento de respaldo *"
                   maxMB={4}
-                  nombre={p.organizacion_documento}
+                  nombre={p.organizacion_documento} tipo="organizacion"
                   onCambio={(n) => {
                     actualizar({ organizacion_documento: n })
                     limpiar()

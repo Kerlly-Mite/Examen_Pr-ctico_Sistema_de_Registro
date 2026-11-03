@@ -7,6 +7,7 @@ import { CAPACITACION_VACIA, validarCapacitacion } from '../lib/secciones'
 import type { Capacitacion } from '../types/postulacion'
 import { BarraGuardar } from './BarraGuardar'
 import { Campo } from './Campo'
+import { nombreDocumento } from '../api/documentos'
 import { CampoArchivo } from './CampoArchivo'
 import { PanelLista } from './PanelLista'
 import { SelectorTexto } from './SelectorTexto'
@@ -48,7 +49,7 @@ export function SeccionCapacitacion() {
               <p className="font-medium">{c.nombre_evento}</p>
               <p className="text-slate-600">
                 {etiquetaDe(TIPOS_EVENTO, c.tipo_evento)} · {c.institucion} · {formatearFecha(c.fecha_inicio)} al{' '}
-                {formatearFecha(c.fecha_fin)} · {c.horas} horas · PDF: {c.documento_respaldo}
+                {formatearFecha(c.fecha_fin)} · {c.horas} horas · PDF: {nombreDocumento(c.documento_respaldo)}
               </p>
             </>
           )}
