@@ -31,6 +31,12 @@ func TestDocumentosDisco(t *testing.T) {
 	if existe, _ := store.Existe(ctx, 7, id); !existe {
 		t.Error("el documento recién guardado debe existir")
 	}
+	if docs, err := store.Listar(ctx, 7); err != nil || len(docs) != 1 || docs[0].ID != id || docs[0].Tamano != int64(len(pdf)) {
+		t.Errorf("Listar debe devolver el documento con su tamaño: %+v (err=%v)", docs, err)
+	}
+	if docs, err := store.Listar(ctx, 99); err != nil || len(docs) != 0 {
+		t.Errorf("un postulante sin documentos debe tener la lista vacía: %+v (err=%v)", docs, err)
+	}
 
 	// Otro postulante NO puede leer el documento aunque conozca el id.
 	if _, err := store.Leer(ctx, 8, id); !errors.Is(err, ErrNoEncontrado) {

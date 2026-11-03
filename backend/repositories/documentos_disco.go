@@ -98,6 +98,28 @@ func (d *documentosDisco) Existe(_ context.Context, postulanteID int64, id strin
 	return info.Mode().IsRegular(), nil
 }
 
+func (d *documentosDisco) Listar(_ context.Context, postulanteID int64) ([]DocumentoInfo, error) {
+	entradas, err := os.ReadDir(d.carpeta(postulanteID))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil // aún no ha subido nada
+	}
+	if err != nil {
+		return nil, fmt.Errorf("listar documentos: %w", err)
+	}
+	var docs []DocumentoInfo
+	for _, e := range entradas {
+		if !e.Type().IsRegular() || !IDDocumentoValido(e.Name()) { // ignora temporales a medio subir
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			return nil, fmt.Errorf("leer datos del documento: %w", err)
+		}
+		docs = append(docs, DocumentoInfo{ID: e.Name(), Tamano: info.Size(), Modificado: info.ModTime()})
+	}
+	return docs, nil
+}
+
 func (d *documentosDisco) carpeta(postulanteID int64) string {
 	return filepath.Join(d.dir, strconv.FormatInt(postulanteID, 10))
 }

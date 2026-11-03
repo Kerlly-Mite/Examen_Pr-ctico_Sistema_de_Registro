@@ -38,6 +38,15 @@ type DocumentoStore interface {
 	// Leer devuelve ErrNoEncontrado si el documento no existe o no pertenece a ese postulante.
 	Leer(ctx context.Context, postulanteID int64, id string) ([]byte, error)
 	Existe(ctx context.Context, postulanteID int64, id string) (bool, error)
+	// Listar devuelve los documentos guardados del postulante (para controlar el máximo de 50 MB).
+	Listar(ctx context.Context, postulanteID int64) ([]DocumentoInfo, error)
+}
+
+// DocumentoInfo describe un documento guardado sin leer su contenido.
+type DocumentoInfo struct {
+	ID         string
+	Tamano     int64
+	Modificado time.Time
 }
 
 // PostulanteRepository gestiona las cuentas de acceso.
