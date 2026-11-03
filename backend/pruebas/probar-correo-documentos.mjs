@@ -72,6 +72,20 @@ mostrar('Otro postulante intenta descargarlo', await descargar(`/postulacion/doc
 mostrar('Ruta maliciosa (../../.env)', await descargar(`/postulacion/documentos/..%2F..%2F.env`, token), 404)
 mostrar('Sin sesión', await descargar(`/postulacion/documentos/${subido.data.id}`), 401)
 
+console.log('\n=== Máximo 50 MB de documentos por postulante (EF-1, Restricciones) con 1702345677 ===')
+const carlos = await sesion('1702345677', '1000000002', 'carlos@correo.com')
+const pdf39 = '%PDF-1.4\n' + 'x'.repeat(3.9 * 1024 * 1024) + '\n%%EOF\n' // 3.9 MB (bajo el límite de 4 MB por archivo)
+let aceptados = 0
+let rechazo = null
+for (let i = 1; i <= 14 && !rechazo; i++) {
+  const r = await subir(carlos, pdf39, `respaldo-${i}.pdf`, 'organizacion')
+  if (r.status === 201) aceptados++
+  else rechazo = r
+}
+comprobar(`Se aceptan ${aceptados} archivos de 3.9 MB (${(aceptados * 3.9).toFixed(1)} MB) y el siguiente se rechaza`, aceptados === 12)
+mostrar('Subir un archivo más allá de los 50 MB', rechazo ?? { status: 0, data: null }, 413)
+comprobar(`Código del error: ${rechazo?.data?.error}`, rechazo?.data?.error === 'limite_documentos')
+
 console.log('\n=== Guardar solo acepta documentos subidos de verdad ===')
 const paises = (await llamar('GET', '/catalogos/paises')).data.data
 const ecuador = paises.find((p) => p.nombre === 'Ecuador')

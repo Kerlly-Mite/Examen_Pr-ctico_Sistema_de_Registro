@@ -278,6 +278,10 @@ Al enviarse, el estado pasa a `ENVIADA` (ya no se puede modificar) y se envía p
 - `archivo`: el PDF.
 - `tipo`: `respaldo` (formación, experiencia, publicaciones, capacitación; **máx. 2 MB**) u `organizacion` (respaldo de organización del cargo; **máx. 4 MB**).
 
+Además, cada postulante tiene **máximo 50 MB** en documentos (EF-1, Restricciones). Cuentan los PDF de su
+postulación guardada y los subidos en las últimas 24 horas que aún no guarda; los que quitó o reemplazó hace
+más de un día ya no ocupan espacio.
+
 **201**
 ```json
 { "id": "9f2c...e1__titulo-maestria.pdf", "nombre": "titulo-maestria.pdf", "tamano": 48213 }
@@ -298,6 +302,7 @@ const res = await fetch('/api/postulacion/documentos', { method: 'POST', headers
 |---|---|---|
 | 400 | `solicitud_invalida` | Falta el campo `archivo` o el `tipo` no es válido |
 | 413 | `archivo_muy_grande` | Supera 2 MB (respaldo) o 4 MB (organización) |
+| 413 | `limite_documentos` | Con este archivo superaría los 50 MB de documentos del postulante |
 | 415 | `formato_no_permitido` | El contenido no es un PDF (se revisa la firma `%PDF-` ... `%%EOF`, no solo la extensión) |
 | 409 | `postulacion_enviada` | La postulación ya se envió |
 

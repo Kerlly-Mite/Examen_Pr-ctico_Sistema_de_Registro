@@ -251,10 +251,26 @@ func (s *postulacionService) SubirDocumento(ctx context.Context, postulanteID in
 	if _, err := s.perfil(ctx, postulanteID); err != nil {
 		return nil, err
 	}
-	if p, err := s.postulaciones.BuscarPorPostulante(ctx, postulanteID); err == nil && p.Estado == "ENVIADA" {
-		return nil, models.ErrConflicto("postulacion_enviada", "Su postulación ya fue enviada y no se puede modificar.")
-	} else if err != nil && !errors.Is(err, repositories.ErrNoEncontrado) {
+	enPostulacion := map[string]bool{}
+	if p, err := s.postulaciones.BuscarPorPostulante(ctx, postulanteID); err == nil {
+		if p.Estado == "ENVIADA" {
+			return nil, models.ErrConflicto("postulacion_enviada", "Su postulación ya fue enviada y no se puede modificar.")
+		}
+		for _, r := range documentosReferenciados(p) {
+			enPostulacion[r.id] = true
+		}
+	} else if !errors.Is(err, repositories.ErrNoEncontrado) {
 		return nil, models.ErrInterno(err)
+	}
+
+	docs, err := s.documentos.Listar(ctx, postulanteID)
+	if err != nil {
+		return nil, models.ErrInterno(err)
+	}
+	if usado := espacioUsado(docs, enPostulacion, time.Now()); usado+int64(len(datos)) > maxDocumentosPostulante {
+		return nil, models.NuevoError(http.StatusRequestEntityTooLarge, "limite_documentos",
+			fmt.Sprintf("Supera el máximo de %d MB en documentos por postulante (ya tiene %.1f MB)",
+				maxDocumentosPostulante>>20, float64(usado)/(1<<20)))
 	}
 
 	id, err := s.documentos.Guardar(ctx, postulanteID, nombre, datos)
@@ -347,8 +363,12 @@ func (s *postulacionService) armarFormularioPDF(ctx context.Context, p *models.P
 }
 
 // verificarDocumentos comprueba que cada PDF citado en la postulación exista en el almacenamiento del postulante.
-func (s *postulacionService) verificarDocumentos(ctx context.Context, p *models.Postulacion) error {
-	type ref struct{ seccion, id string }
+// refDocumento es un documento de respaldo citado en la postulación y la sección donde aparece.
+type refDocumento struct{ seccion, id string }
+
+// documentosReferenciados reúne los PDF de respaldo de todas las secciones (1.4 a 1.8).
+func documentosReferenciados(p *models.Postulacion) []refDocumento {
+	type ref = refDocumento
 	var refs []ref
 	if p.OrganizacionDocumento != "" {
 		refs = append(refs, ref{"Cargo al que postula", p.OrganizacionDocumento})
@@ -365,7 +385,11 @@ func (s *postulacionService) verificarDocumentos(ctx context.Context, p *models.
 	for _, x := range p.Capacitaciones {
 		refs = append(refs, ref{"Capacitación", x.DocumentoRespaldo})
 	}
-	for _, r := range refs {
+	return refs
+}
+
+func (s *postulacionService) verificarDocumentos(ctx context.Context, p *models.Postulacion) error {
+	for _, r := range documentosReferenciados(p) {
 		existe, err := s.documentos.Existe(ctx, p.PostulanteID, r.id)
 		if err != nil {
 			return models.ErrInterno(err)
