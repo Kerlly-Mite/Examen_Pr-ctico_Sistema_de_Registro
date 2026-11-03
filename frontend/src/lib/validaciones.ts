@@ -3,6 +3,7 @@ import { fechaHoyISO } from './formato'
 export function validarCedula(v: string): string | undefined {
   if (v.trim() === '') return 'Ingrese su cédula'
   if (!/^\d{10}$/.test(v)) return 'La cédula debe tener 10 dígitos'
+  if (!cedulaEcuatorianaValida(v)) return 'La cédula no es válida, revise el número'
   return undefined
 }
 
@@ -33,4 +34,18 @@ export function validarPassword(v: string): string | undefined {
 export function validarConfirmacion(password: string, confirmacion: string): string | undefined {
   if (confirmacion !== password) return 'Las contraseñas no coinciden'
   return undefined
+}
+// Dígito verificador de la cédula ecuatoriana (módulo 10)
+export function cedulaEcuatorianaValida(cedula: string): boolean {
+  if (!/^\d{10}$/.test(cedula)) return false
+  const provincia = Number(cedula.slice(0, 2))
+  if (!((provincia >= 1 && provincia <= 24) || provincia === 30)) return false
+  if (Number(cedula[2]) > 5) return false
+  let suma = 0
+  for (let i = 0; i < 9; i++) {
+    let valor = Number(cedula[i]) * (i % 2 === 0 ? 2 : 1)
+    if (valor > 9) valor -= 9
+    suma += valor
+  }
+  return (10 - (suma % 10)) % 10 === Number(cedula[9])
 }
