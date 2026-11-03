@@ -4,6 +4,7 @@ import type { Aviso } from '../lib/lista'
 import { calcularPendientes } from '../lib/postulacion'
 import { Alerta } from './Alerta'
 import { Boton } from './Boton'
+import { BotonDescargarPdf } from './BotonDescargarPdf'
 
 const DECLARACION = [
   'Autorizo de manera libre y voluntaria, emitiendo consentimiento explícito al Instituto Ecuatoriano de Seguridad Social, para el uso de mis datos personales dentro del concurso de méritos y oposición para la selección de los Miembros Principales y Alternos del Directorio del Banco del Instituto Ecuatoriano de Seguridad Social (BIESS), en Representación de los Afiliados, Jubilados y Empleadores, de conformidad con lo prescrito en el artículo 7 de la Ley Orgánica de Protección de Datos Personales.',
@@ -67,7 +68,8 @@ export function SeccionEnvio() {
               Su postulación fue enviada. Código: <strong>{p.codigo}</strong>. Se envió la confirmación al correo{' '}
               {p.correo_1}.
             </Alerta>
-            <button
+            <BotonDescargarPdf />
+<button
               type="button"
               onClick={() => window.print()}
               className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
