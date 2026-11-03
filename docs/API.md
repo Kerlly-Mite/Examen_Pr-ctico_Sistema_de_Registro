@@ -138,7 +138,7 @@ Todas requieren `Authorization: Bearer <token>`. El usuario se toma del JWT: nad
 ```json
 {
   "cargos": [ { "codigo": "AFILIADOS", "nombre": "Miembro Principal y Alterno ...", "sector": "AFILIADOS" }, ... ],
-  "inhabilidades": [ { "codigo": "1.9.1", "texto": "¿Es Ecuatoriano/a ...?", "respuesta_habilitante": true }, ... ]
+  "inhabilidades": [ { "codigo": "1.9.1", "texto": "¿Es Ecuatoriano/a ...?", "respuesta_habilitante": true, "impide_postular": true }, ... ]
 }
 ```
 Cargos y preguntas se identifican por `codigo` (estable), nunca por id.
@@ -266,6 +266,7 @@ Si `cumple` es `true`, mostrar `estado` y la `pregunta` del respaldo de organiza
 | Domicilio (país, provincia/cantón o textos, celular, calle principal), cargo y respuesta del respaldo de organización completos; si dijo que tiene familiares, al menos uno | 422 `postulacion_incompleta` (con `seccion`) |
 | Las 13 preguntas de inhabilidades respondidas | 422 `postulacion_incompleta` (con `preguntas` faltantes) |
 | Ninguna respuesta inhabilitante (según `respuesta_habilitante` de `/opciones`) | 403 `postulante_inhabilitado` (con `preguntas`) |
+| 1.9.7 "Sí" (con sus datos) **no** impide enviar: `impide_postular` es `false`; los datos constan en el formulario final y los evalúa la Comisión de Selección | — |
 | Ya enviada | 409 `postulacion_enviada` |
 | Se guardó otro cambio mientras se enviaba (bloqueo optimista con `actualizado_en`) | 409 `postulacion_modificada` |
 

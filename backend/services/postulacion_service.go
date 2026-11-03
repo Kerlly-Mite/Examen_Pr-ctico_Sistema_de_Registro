@@ -193,6 +193,7 @@ func (s *postulacionService) Enviar(ctx context.Context, postulanteID int64, req
 	if err != nil {
 		return nil, models.ErrInterno(err)
 	}
+	marcarImpedimentos(preguntas)
 	if errRegla := validarEnvio(p, ecuadorID, preguntas); errRegla != nil {
 		return nil, errRegla
 	}
@@ -410,6 +411,7 @@ func (s *postulacionService) Opciones(ctx context.Context) (*models.OpcionesPost
 	if err != nil {
 		return nil, models.ErrInterno(err)
 	}
+	marcarImpedimentos(preguntas)
 	return &models.OpcionesPostulacion{Cargos: cargos, Inhabilidades: preguntas}, nil
 }
 

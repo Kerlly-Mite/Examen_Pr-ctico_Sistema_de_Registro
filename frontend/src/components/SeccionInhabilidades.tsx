@@ -47,7 +47,7 @@ export function SeccionInhabilidades() {
       <div className="mt-4 space-y-5">
         {opciones.inhabilidades.map((q) => {
           const r = buscar(q.codigo)
-          const inhabilitante = r !== undefined && r.respuesta !== q.respuesta_habilitante
+          const inhabilitante = q.impide_postular && r !== undefined && r.respuesta !== q.respuesta_habilitante
           return (
             <div key={q.codigo} className="space-y-3">
               <GrupoSiNo
@@ -59,6 +59,13 @@ export function SeccionInhabilidades() {
               {inhabilitante && (
                 <p className="text-xs text-amber-700">
                   Con esta respuesta no podrá enviar la postulación (impedimento según las reglas del concurso).
+                </p>
+              )}
+
+              {q.codigo === CODIGO_REMOVIDO && r?.respuesta === true && (
+                <p className="text-xs text-slate-600">
+                  Esta respuesta no impide enviar la postulación: los datos constarán en el formulario final y los
+                  evaluará la Comisión de Selección.
                 </p>
               )}
 

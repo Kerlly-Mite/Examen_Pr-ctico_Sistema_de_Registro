@@ -174,14 +174,21 @@ func postulacionCompleta() *models.Postulacion {
 	p.PaisID, p.ProvinciaID, p.CantonID = &ec, &prov, &canton
 	p.TelefonoCelular, p.CallePrincipal = "0991111111", "Av. Solano"
 	p.CargoCodigo, p.RespaldadoOrganizacion = "AFILIADOS", &no
-	p.Inhabilidades = []models.RespuestaInhabilidad{{Codigo: "1.9.1", Respuesta: true}, {Codigo: "1.9.2", Respuesta: false}}
+	p.Inhabilidades = []models.RespuestaInhabilidad{{Codigo: "1.9.1", Respuesta: true}, {Codigo: "1.9.2", Respuesta: false},
+		{Codigo: "1.9.7", Respuesta: false}}
 	return p
 }
 
-var preguntasPrueba = []models.PreguntaInhabilidad{
-	{Codigo: "1.9.1", RespuestaHabilitante: true},
-	{Codigo: "1.9.2", RespuestaHabilitante: false},
-}
+// preguntasPrueba pasan por marcarImpedimentos igual que en el service: 1.9.7 no impide postular.
+var preguntasPrueba = func() []models.PreguntaInhabilidad {
+	q := []models.PreguntaInhabilidad{
+		{Codigo: "1.9.1", RespuestaHabilitante: true},
+		{Codigo: "1.9.2", RespuestaHabilitante: false},
+		{Codigo: "1.9.7", RespuestaHabilitante: false},
+	}
+	marcarImpedimentos(q)
+	return q
+}()
 
 func TestEnvio(t *testing.T) {
 	if err := validarEnvio(postulacionCompleta(), ecuadorPrueba, preguntasPrueba); err != nil {
@@ -198,6 +205,23 @@ func TestEnvio(t *testing.T) {
 	p.Inhabilidades[1].Respuesta = true // "Sí, estoy inhabilitado para ejercer el comercio"
 	if err := validarEnvio(p, ecuadorPrueba, preguntasPrueba); codigoDe(err) != "postulante_inhabilitado" {
 		t.Errorf("una respuesta inhabilitante debe impedir el envío: se obtuvo %q", codigoDe(err))
+	}
+}
+
+func TestRemocion197SeRegistraSinImpedirElEnvio(t *testing.T) {
+	impide := map[string]bool{}
+	for _, q := range preguntasPrueba {
+		impide[q.Codigo] = q.ImpidePostular
+	}
+	if !impide["1.9.1"] || !impide["1.9.2"] || impide["1.9.7"] {
+		t.Fatalf("solo 1.9.7 debe quedar sin impedimento: %v", impide)
+	}
+
+	p := postulacionCompleta()
+	p.Inhabilidades[2] = models.RespuestaInhabilidad{Codigo: "1.9.7", Respuesta: true,
+		RemocionInstitucion: "Superintendencia de Bancos", RemocionMotivo: "Reestructuración", RemocionFechaFin: fecha("2023-05-31")}
+	if err := validarEnvio(p, ecuadorPrueba, preguntasPrueba); err != nil {
+		t.Errorf("responder \"Sí\" en 1.9.7 debe registrarse sin impedir el envío: %v", err)
 	}
 }
 
