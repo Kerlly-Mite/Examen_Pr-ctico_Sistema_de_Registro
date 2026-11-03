@@ -68,6 +68,22 @@ func main() {
 	postulanteRepo := repositories.NewPostulanteRepository(db)
 	limitador := repositories.NewLimitadorIntentos(rdb, maxIntentos, time.Duration(bloqueoMin)*time.Minute)
 	tokenStore := repositories.NewTokenStore(rdb)
+	postulacionRepo := repositories.NewPostulacionRepository(db)
+	historialRepo := repositories.NewHistorialLaboralRepository(db)
+	documentoStore, err := repositories.NewDocumentoStoreDisco(config.GetEnv("UPLOADS_DIR", "uploads"))
+	if err != nil {
+		log.Fatalf("Error de almacenamiento de documentos: %v", err)
+	}
+
+	// Correo: SMTP real si SMTP_HOST está configurado; si no, se muestra en la consola.
+	notificador := services.NewNotificadorCorreo(services.NewEnviadorCorreo(services.ConfigSMTP{
+		Host:      config.GetEnv("SMTP_HOST", ""),
+		Puerto:    config.GetEnvInt("SMTP_PORT", 587),
+		Usuario:   config.GetEnv("SMTP_USER", ""),
+		Clave:     config.GetEnv("SMTP_PASSWORD", ""),
+		Remitente: config.GetEnv("SMTP_FROM", ""),
+		Nombre:    config.GetEnv("SMTP_FROM_NAME", "Postulación Directorio BIESS"),
+	}))
 
 	// 3) Services (reciben repositories por interfaz).
 	gestorTokens := services.NewGestorTokens(jwtSecret, time.Duration(config.GetEnvInt("JWT_HORAS", 8))*time.Hour)
@@ -78,8 +94,17 @@ func main() {
 		limitador,
 		tokenStore,
 		gestorTokens,
-		services.NewNotificadorConsola(),
+		notificador, // correo de recuperación de contraseña (EF-11)
 		config.GetEnv("FRONTEND_URL", "http://localhost:5180"),
+	)
+	postulacionSvc := services.NewPostulacionService(
+		postulacionRepo,
+		postulanteRepo,
+		registroCivilRepo,
+		historialRepo,
+		catalogoRepo, // con caché Redis: se usa para ubicar a Ecuador en el catálogo de países
+		documentoStore,
+		notificador, // correo de confirmación con el formulario en PDF (EF-12, 1.10.3)
 	)
 
 	// 4) Handlers (reciben services por interfaz).
@@ -87,11 +112,18 @@ func main() {
 		Health:       handlers.NewHealthHandler(db, repositories.NewRedisPinger(rdb)),
 		Catalogo:     handlers.NewCatalogoHandler(catalogoSvc),
 		Auth:         handlers.NewAuthHandler(authSvc),
+		Postulacion:  handlers.NewPostulacionHandler(postulacionSvc),
 		RequiereAuth: middleware.RequiereAuth(gestorTokens),
 	}
 
 	// 5) Servidor web.
-	app := fiber.New(fiber.Config{AppName: "BIESS Postulación API"})
+	app := fiber.New(fiber.Config{
+		AppName: "BIESS Postulación API",
+		// Los PDF de organización pueden pesar hasta 4 MB (más la cabecera multipart). El límite exacto lo valida el service.
+		BodyLimit: 5 << 20,
+		// Errores propios de Fiber (404, 405) en el mismo JSON {error, message} que el resto de la API.
+		ErrorHandler: handlers.ManejadorErrores,
+	})
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: origenesPermitidos(),

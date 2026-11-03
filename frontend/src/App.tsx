@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { RedirigirInicio } from './components/RedirigirInicio'
+import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegistroPage } from './pages/RegistroPage'
 import { RecuperarPage } from './pages/RecuperarPage'
@@ -13,7 +13,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<RedirigirInicio />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegistroPage />} />
         <Route path="/recuperar" element={<RecuperarPage />} />

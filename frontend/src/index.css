@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+@theme {
+  --color-biess-50: #eef3fb;
+  --color-biess-100: #dbe6f6;
+  --color-biess-700: #1d4283;
+  --color-biess-800: #17356b;
+  --color-biess-900: #10264d;
+  --color-oro-400: #f2b705;
+  --color-oro-500: #e0a100;
+  --color-oro-600: #c78d00;
+}

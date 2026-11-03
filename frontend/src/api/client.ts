@@ -53,6 +53,24 @@ function esCuerpoDeError(valor: unknown): valor is ApiErrorBody {
   )
 }
 
+// Si el servidor no responde en este tiempo se cancela la petición, para que la pantalla no quede cargando sin fin
+export const TIEMPO_LIMITE_MS = 20_000
+export const TIEMPO_LIMITE_ARCHIVOS_MS = 60_000
+
+// Convierte el fallo de fetch (sin red o tiempo agotado) en un ApiError con mensaje para el usuario
+export function errorDeRed(err: unknown): ApiError {
+  if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+    return new ApiError(0, {
+      error: 'tiempo_agotado',
+      message: 'El servidor tardó demasiado en responder. Intente nuevamente.',
+    })
+  }
+  return new ApiError(0, {
+    error: 'sin_conexion',
+    message: 'No se pudo conectar con el servidor. Intente nuevamente.',
+  })
+}
+
 async function peticion<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
   if (cuerpo !== undefined) headers['Content-Type'] = 'application/json'
@@ -65,15 +83,13 @@ async function peticion<T>(metodo: string, ruta: string, cuerpo?: unknown): Prom
       method: metodo,
       headers,
       body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
+      signal: AbortSignal.timeout(TIEMPO_LIMITE_MS),
     })
-  } catch {
-    throw new ApiError(0, {
-      error: 'sin_conexion',
-      message: 'No se pudo conectar con el servidor. Intente nuevamente.',
-    })
+  } catch (err) {
+    throw errorDeRed(err)
   }
 
-  let datos: unknown = null
+  let datos: unknown
   try {
     datos = await respuesta.json()
   } catch {

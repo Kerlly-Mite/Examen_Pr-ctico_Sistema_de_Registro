@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -231,9 +232,17 @@ func (s *authService) SolicitarRecuperacion(ctx context.Context, req models.Veri
 		return models.ErrInterno(err)
 	}
 	enlace := s.frontendURL + "/restablecer?token=" + token
-	if err := s.notificador.EnviarRecuperacion(ctx, p.Correo, enlace); err != nil {
-		return models.ErrInterno(err)
-	}
+	// El correo se envía en segundo plano: si el servidor SMTP tarda o falla, el postulante igual recibe la
+	// respuesta de inmediato, y el tiempo de respuesta no delata si la cédula tiene cuenta o no.
+	go func(correo, enlace string) {
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutCorreo)
+		defer cancel()
+		if err := s.notificador.EnviarRecuperacion(ctx, correo, enlace); err != nil {
+			log.Printf("[recuperacion] no se pudo enviar el correo a %s: %v", correo, err)
+			return
+		}
+		log.Printf("[recuperacion] correo de recuperación enviado a %s", correo)
+	}(p.Correo, enlace)
 	return nil
 }
 
@@ -291,7 +300,7 @@ func (s *authService) validarIdentidad(ctx context.Context, contexto string, req
 		fechaIngresada = t
 	}
 	if dactilar != "" && !reDactilar.MatchString(dactilar) {
-		return nil, models.ErrSolicitudInvalida("El código dactilar debe tener 10 dígitos")
+		return nil, models.ErrSolicitudInvalida("El código dactilar debe tener 10 caracteres (letras y números)")
 	}
 
 	// 2) ¿Hay un bloqueo vigente? Aunque los datos sean correctos, no se deja continuar.
@@ -311,7 +320,7 @@ func (s *authService) validarIdentidad(ctx context.Context, contexto string, req
 		coincide = rc.FechaExpedicion.Format(layoutFecha) == fechaIngresada.Format(layoutFecha)
 	}
 	if coincide && dactilar != "" {
-		coincide = rc.CodigoDactilar == dactilar
+		coincide = strings.EqualFold(strings.TrimSpace(rc.CodigoDactilar), dactilar)
 	}
 	if !coincide {
 		return nil, s.registrarFallo(ctx, contexto, cedula, "informacion_incorrecta", "La información ingresada es incorrecta")

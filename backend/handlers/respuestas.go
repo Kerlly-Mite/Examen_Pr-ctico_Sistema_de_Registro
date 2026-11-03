@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,4 +30,26 @@ func responderError(c *fiber.Ctx, err error) error {
 		"error":   "error_interno",
 		"message": "Ocurrió un error interno, intente nuevamente",
 	})
+}
+
+// erroresFiber traduce los errores que genera el propio Fiber (antes de llegar a un handler) al mismo
+// formato {error, message} del resto de la API.
+var erroresFiber = map[int]*models.AppError{
+	fiber.StatusNotFound:         models.NuevoError(fiber.StatusNotFound, "ruta_no_encontrada", "La ruta solicitada no existe"),
+	fiber.StatusMethodNotAllowed: models.NuevoError(fiber.StatusMethodNotAllowed, "metodo_no_permitido", "El método HTTP no está permitido en esta ruta"),
+}
+
+// ManejadorErrores es el ErrorHandler global de Fiber: rutas inexistentes, métodos no permitidos,
+// pánicos recuperados y cualquier error que un handler devuelva sin usar responderError responden en JSON.
+func ManejadorErrores(c *fiber.Ctx, err error) error {
+	var fe *fiber.Error
+	if errors.As(err, &fe) {
+		if ae, ok := erroresFiber[fe.Code]; ok {
+			return responderError(c, ae)
+		}
+		if fe.Code < fiber.StatusInternalServerError {
+			return responderError(c, models.NuevoError(fe.Code, "solicitud_invalida", fe.Message))
+		}
+	}
+	return responderError(c, err)
 }

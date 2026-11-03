@@ -8,14 +8,13 @@ import (
 )
 
 // Dependencias agrupa los handlers ya construidos (con sus services y repositories inyectados).
-// En la Fase 4-5 se agrega aquí el handler de postulación.
 type Dependencias struct {
-	Health   *handlers.HealthHandler
-	Catalogo *handlers.CatalogoHandler
-	Auth     *handlers.AuthHandler
+	Health      *handlers.HealthHandler
+	Catalogo    *handlers.CatalogoHandler
+	Auth        *handlers.AuthHandler
+	Postulacion *handlers.PostulacionHandler
 
 	// RequiereAuth es el middleware JWT. Las rutas que lo usan solo responden con sesión válida.
-	// Ejemplo (Fase 4-5):  api.Group("/postulacion", d.RequiereAuth)
 	RequiereAuth fiber.Handler
 }
 
@@ -39,4 +38,15 @@ func Registrar(app *fiber.App, d Dependencias) {
 	auth.Post("/recuperar/solicitar", d.Auth.SolicitarRecuperacion)
 	auth.Post("/recuperar/restablecer", d.Auth.RestablecerPassword)
 	auth.Get("/me", d.RequiereAuth, d.Auth.Me)
+
+	// Formulario de postulación (EF-12): todas las rutas requieren sesión.
+	post := api.Group("/postulacion", d.RequiereAuth)
+	post.Get("/", d.Postulacion.Obtener)
+	post.Put("/", d.Postulacion.Guardar)
+	post.Get("/opciones", d.Postulacion.Opciones)
+	post.Get("/verificar-cargo/:codigo", d.Postulacion.VerificarCargo)
+	post.Post("/enviar", d.Postulacion.Enviar)
+	post.Get("/formulario.pdf", d.Postulacion.FormularioPDF)
+	post.Post("/documentos", d.Postulacion.SubirDocumento)
+	post.Get("/documentos/:id", d.Postulacion.Documento)
 }
