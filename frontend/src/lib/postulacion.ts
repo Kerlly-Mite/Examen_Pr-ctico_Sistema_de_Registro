@@ -102,7 +102,7 @@ export function calcularPendientes(p: Postulacion, o: OpcionesPostulacion): Pend
   }
   const inhabilitantes = o.inhabilidades.filter((q) => {
     const r = p.inhabilidades.find((x) => x.codigo === q.codigo)
-    return r !== undefined && r.respuesta !== q.respuesta_habilitante
+    return q.impide_postular && r !== undefined && r.respuesta !== q.respuesta_habilitante
   })
   if (inhabilitantes.length > 0) {
     obligatorios.push(

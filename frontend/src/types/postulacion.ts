@@ -134,6 +134,8 @@ export interface PreguntaInhabilidad {
   codigo: string
   texto: string
   respuesta_habilitante: boolean
+  // false en 1.9.7: su respuesta "Sí" se registra con sus datos pero no impide enviar
+  impide_postular: boolean
 }
 
 export interface OpcionesPostulacion {
