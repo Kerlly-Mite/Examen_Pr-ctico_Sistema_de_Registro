@@ -1,6 +1,8 @@
 import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { EstadoApi } from './EstadoApi'
+import { InstallButton } from '../pwa/InstallButton'
+import { PwaStatus } from '../pwa/PwaStatus'
 
 export function Layout() {
   const { estaAutenticado, usuario, cerrarSesion } = useAuth()
@@ -13,6 +15,7 @@ export function Layout() {
             IESS · BIESS
           </Link>
           <div className="flex items-center gap-4 text-sm">
+            <InstallButton />
             <span className="hidden text-white/90 md:inline">Concurso de méritos y oposición</span>
             {estaAutenticado && (
               <div className="flex items-center gap-3 border-l border-white/30 pl-4">
@@ -37,6 +40,7 @@ export function Layout() {
       <footer className="px-4 py-3 text-center text-xs print:hidden">
         <EstadoApi />
       </footer>
+      <PwaStatus />
     </div>
   )
 }
