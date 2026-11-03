@@ -9,7 +9,8 @@ Módulo de registro (EF-11) y formulario de postulación (EF-12) del Concurso P�
 - **Login** con JWT (8 horas), recuperación de contraseña y **bloqueo de 10 minutos** tras 3 intentos fallidos.
 - **Formulario de postulación** por secciones: información personal, domicilio con cascada País → Provincia → Cantón, familiares en el IESS/BIESS, cargo, formación, experiencia, publicaciones, capacitación e inhabilidades.
 - **Reglas de negocio** en el servidor: solo nacionalidad ecuatoriana, validación de la calidad de afiliado, jubilado o empleador, datos de la pareja y cálculo de la experiencia sin contar dos veces los periodos que se cruzan.
-- **Envío** con consentimiento, firma, código de postulación único y correo de confirmación (simulado).
+- **Envío** con consentimiento, firma, código de postulación único y **correo real** de confirmación con el **formulario PDF adjunto**.
+- **Documentos PDF reales**: subida al servidor con validación del contenido (no solo la extensión), máximo 2 MB por archivo de respaldo, 4 MB el de la organización y 50 MB por postulante. Formulario de postulación descargable en PDF con diseño institucional.
 
 ## Arquitectura
 
@@ -71,7 +72,7 @@ git checkout develop
 copy .env.example .env        # en Mac/Linux: cp .env.example .env
 ~~~
 
-Edita `.env` y cambia `JWT_SECRET` por un texto propio. Luego:
+Edita `.env` y cambia `JWT_SECRET` por un texto propio. Para que los correos lleguen de verdad, completa `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (contraseña de aplicación de Gmail), `SMTP_FROM` y `SMTP_FROM_NAME`; si `SMTP_HOST` queda vacío, los correos se muestran en la consola del backend. Luego:
 
 ~~~bash
 docker compose up -d          # PostgreSQL y Redis (la primera vez ejecuta los .sql)
@@ -120,7 +121,8 @@ Con el backend corriendo, desde `backend/`:
 node pruebas/probar-fase2-3.mjs    # registro, login, bloqueo con Redis y caché
 node pruebas/probar-fase4.mjs      # guardado transaccional de la postulación
 node pruebas/probar-fase5.mjs      # reglas de negocio y envío
-go test ./services/                # reglas de negocio sin base de datos
+node pruebas/probar-correo-documentos.mjs   # subida de PDF, límite de 50 MB, formulario PDF y correo
+go test ./...                      # pruebas unitarias (reglas, correo SMTP, documentos) sin base de datos
 ~~~
 
 Para repetir las pruebas sin esperar los 10 minutos del bloqueo:
@@ -137,13 +139,16 @@ Usuarios de prueba (contraseña `Clave1234`, el correo puede ser cualquiera):
 | 1702345677 | 1000000002 | Carlos: flujo completo |
 | 2403456789 | 1000000003 | Lucía, jubilada: cargo de Jubilados y prueba de inhabilidades |
 | 1705678900 | 1000000005 | Extranjero: la postulación se cierra por nacionalidad |
-| 0901234567 | 1000000001 | Prueba del bloqueo por intentos fallidos |
+| 0104567896 | 1000000004 | José Luis: afiliado en unión de hecho (pide los datos de la pareja) |
+| 0901234567 | 1000000001 | María Fernanda: bloqueo por intentos fallidos y prueba de correo y documentos |
 
 ## Decisiones técnicas
 
 - **Transacción**: guardar la postulación hace `BEGIN`, `SELECT ... FOR UPDATE`, `INSERT` o `UPDATE` de la cabecera, `DELETE` e `INSERT` de las seis tablas hijas y `COMMIT`. Si algo falla, `ROLLBACK` y no queda nada a medias.
 - **Bloqueo optimista**: al enviar se compara `actualizado_en`; si hubo otro cambio, responde 409.
 - **Redis**: contadores de intentos y bloqueo (10 min), tokens de registro (15 min) y de recuperación (30 min), y caché de catálogos (24 h).
+- **Correo**: envío real por SMTP (STARTTLS) con HTML y el formulario PDF adjunto; la confirmación se envía en segundo plano para no demorar la respuesta.
+- **Documentos**: cada PDF se guarda en una carpeta por postulante con un id aleatorio; nadie puede leer los documentos de otra persona y se bloquean rutas maliciosas (`../`).
 - **Frontend**: la sesión vive en un contexto y se valida con `GET /api/auth/me` al recargar. El cliente de API convierte los errores `{error, message}` en un `ApiError` y cierra la sesión ante un 401 `no_autorizado`. El formulario completo vive en otro contexto y se envía entero en cada guardado.
 - **Errores**: el frontend decide con el código estable `error` y muestra el `message`.
 
@@ -154,7 +159,7 @@ Usuarios de prueba (contraseña `Clave1234`, el correo puede ser cualquiera):
 | 0-1 | Estructura, Docker, SQL, arquitectura en capas, catálogos | A (Kerlly) | Hecha |
 | 2 | Registro, login, JWT y bloqueo de 10 min con Redis (EF-11) | A (Kerlly) | Hecha |
 | 3 | Caché de catálogos en Redis | A (Kerlly) | Hecha |
-| 4-5 | Postulación con transacciones y reglas de negocio (EF-12) | B | Hecha |
+| 4-5 | Postulación con transacciones, reglas de negocio (EF-12), correo real por SMTP, subida de PDF y formulario PDF | B (María) | Hecha |
 | 6-7 | Frontend: autenticación, formulario completo, rutas protegidas, estados de carga y error | C (Estefany) | Hecha |
 | 8 | README final, revisión cruzada y guion de sustentación | Las tres | En curso |
 
@@ -165,5 +170,6 @@ Ramas permanentes `main` (estable) y `develop` (integración); una rama por fase
 ## Alcance y limitaciones
 
 - El enunciado del examen evalúa EF-11 y EF-12. Quedan fuera el módulo de administración (EF-13) y el banco de preguntas con evaluación teórica (EF-14).
-- El Registro Civil, el Historial Laboral y el envío de correos están **simulados**: usan tablas de prueba y los correos se imprimen en la consola del backend.
-- Los documentos PDF se validan en el cliente (formato y tamaño), pero por ahora solo se guarda el nombre del archivo.
+- El Registro Civil y el Historial Laboral están **simulados** con tablas de prueba (no hay acceso a los sistemas reales del Estado).
+- El envío de correos es **real** (SMTP); sin configuración SMTP se muestran en la consola del backend.
+- El código dactilar acepta 10 caracteres alfanuméricos, como el de la cédula ecuatoriana real.
