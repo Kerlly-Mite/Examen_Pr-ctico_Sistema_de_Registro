@@ -1,0 +1,15 @@
+{$DOMINIO} {
+encode gzip zstd
+
+handle /api/* {
+reverse_proxy backend:3001
+}
+
+handle {
+root * /srv
+@sinCache path /sw.js /index.html /manifest.webmanifest /offline.html
+header @sinCache Cache-Control "no-cache"
+try_files {path} /index.html
+file_server
+}
+}

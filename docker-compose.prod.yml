@@ -1,0 +1,70 @@
+# Produccion: docker compose -f docker-compose.prod.yml up -d --build
+# Lee el archivo .env del servidor (DOMINIO, DB_PASSWORD, JWT_SECRET, SMTP_*). Ese .env NO se sube a Git.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-biess_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en .env}
+      POSTGRES_DB: ${DB_NAME:-biess_postulacion}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-biess_user} -d ${DB_NAME:-biess_postulacion}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    # root dentro del contenedor para poder escribir los PDF en el volumen
+    user: "0:0"
+    env_file: .env
+    environment:
+      PORT: "3001"
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      UPLOADS_DIR: /data/uploads
+      FRONTEND_URL: https://${DOMINIO}
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO en .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:
