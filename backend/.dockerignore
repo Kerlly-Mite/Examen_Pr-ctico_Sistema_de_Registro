@@ -1,3 +1,5 @@
 .env
 *.exe
 /api
+# PDF subidos en las pruebas locales: datos de prueba que no deben entrar en la imagen
+uploads/
