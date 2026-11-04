@@ -3,6 +3,8 @@
 Examen práctico del primer parcial — **Frameworks de Programación Web** (UPSE).
 Módulo de registro (EF-11) y formulario de postulación (EF-12) del Concurso Público de Méritos y Oposición del Directorio del BIESS, según el Requerimiento Funcional IESS v1.4 (Resolución C.D. 701). Proyecto desarrollado por tres integrantes.
 
+**Aplicación en línea:** https://TU_DOMINIO (se puede instalar como PWA desde el navegador)
+
 ## Qué hace
 
 - **Registro** en dos pasos: verificación de identidad con cédula y fecha de expedición o código dactilar (simulado), y luego correo y contraseña.
@@ -200,11 +202,15 @@ Las cinco últimas se agregaron después: si tu base de datos ya existía, recr�
 | 3 | Caché de catálogos en Redis | A (Kerlly) | Hecha |
 | 4-5 | Postulación con transacciones, reglas de negocio (EF-12), correo real por SMTP, subida de PDF y formulario PDF | B (María) | Hecha |
 | 6-7 | Frontend: autenticación, formulario completo, rutas protegidas, estados de carga y error | C (Estefany) | Hecha |
-| 8 | README final, revisión cruzada y guion de sustentación | Las tres | En curso |
+| Extra | Personas de prueba adicionales con código dactilar alfanumérico | A (Kerlly) | Hecha |
+| Extra | PWA instalable con modo sin conexión y aviso de nueva versión | C (Estefany) | Hecha |
+| Extra | Despliegue en VPS con Docker Compose y Caddy (HTTPS automático) | C (Estefany) | Hecha |
+| Extra | Correcciones tras la revisión: errores en JSON, tiempo límite en el frontend, regla de la pregunta 1.9.7, máximo de 50 MB por postulante y hora de Ecuador en producción | B (María) | Hecha |
+| 8 | README final, revisión cruzada y guion de sustentación | Las tres | Hecha |
 
 ## Flujo de Git
 
-Ramas permanentes `main` (estable) y `develop` (integración); una rama por fase (`feature/...`, `docs/...`); Pull Request hacia `develop` revisado por otra integrante; commits con prefijo `feat:`, `fix:`, `docs:` o `chore:`; nadie hace push directo a `main` ni a `develop`.
+Ramas permanentes `main` (estable) y `develop` (integración); una rama por fase o corrección (`feature/...`, `fix/...`, `docs/...`); Pull Request hacia `develop` revisado por otra integrante; commits con prefijo `feat:`, `fix:`, `test:`, `docs:` o `chore:`; nadie hace push directo a `main` ni a `develop`.
 
 ## Alcance y limitaciones
 
