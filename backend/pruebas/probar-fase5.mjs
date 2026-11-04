@@ -81,7 +81,8 @@ comprobar(`Verificar EMPLEADORES: "${empleador.data?.estado}"`, empleador.data?.
 
 console.log('\n=== Flujo completo: 2403456789 (LUCIA, jubilada) ===')
 const tLucia = await sesion('2403456789', '1000000003', 'lucia@correo.com')
-const [docExp, docOrg] = [await subirPDF(tLucia, 'experiencia.pdf'), await subirPDF(tLucia, 'respaldo-federacion.pdf', 'organizacion')]
+const [docExp, docOrg, docTitulo] = [await subirPDF(tLucia, 'experiencia.pdf'),
+  await subirPDF(tLucia, 'respaldo-federacion.pdf', 'organizacion'), await subirPDF(tLucia, 'titulo-economia.pdf')]
 const opciones = (await llamar('GET', '/postulacion/opciones', null, tLucia)).data
 const habilitantes = opciones.inhabilidades.map((q) => ({ codigo: q.codigo, respuesta: q.respuesta_habilitante }))
 
@@ -93,6 +94,9 @@ const lucia = {
   ...domicilio,
   cargo_codigo: 'JUBILADOS', respaldado_organizacion: true,
   organizacion_nombre: 'Federación Nacional de Jubilados', organizacion_documento: docOrg,
+  formacion: [{ nivel_instruccion: 'TERCER_NIVEL', institucion: 'Universidad Central del Ecuador', tipo: 'NACIONAL',
+    titulo: 'Economista', area_estudios: 'ECONOMIA', registro_senescyt: '1005-1980-000123', fecha_registro_senescyt: '1980-07-15',
+    documento_respaldo: docTitulo }],
   experiencia: [experiencia('Gerente', '2015-01-01', '2019-12-31'), experiencia('Asesora', '2018-01-01', '2020-12-31')],
   inhabilidades: habilitantes.slice(0, 5), // aún no responde todas
 }
@@ -123,6 +127,8 @@ const removida = habilitantes.map((r) => (r.codigo === '1.9.7'
   : r))
 mostrar('1.9.7 "Sí" sin la institución ni el motivo', await llamar('PUT', '/postulacion',
   { ...lucia, inhabilidades: removida.map((r) => (r.codigo === '1.9.7' ? { codigo: r.codigo, respuesta: true } : r)) }, tLucia), 400)
+await llamar('PUT', '/postulacion', { ...lucia, formacion: [], inhabilidades: removida }, tLucia)
+mostrar('Enviar sin formación académica (1.5: al menos una)', await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia), 422)
 mostrar('1.9.7 "Sí" con los datos de la remoción', await llamar('PUT', '/postulacion', { ...lucia, inhabilidades: removida }, tLucia), 200)
 const enviada = await llamar('POST', '/postulacion/enviar', { consentimiento_aceptado: true }, tLucia)
 mostrar('Enviar postulación completa (llega por correo con el formulario PDF adjunto)', enviada, 200)

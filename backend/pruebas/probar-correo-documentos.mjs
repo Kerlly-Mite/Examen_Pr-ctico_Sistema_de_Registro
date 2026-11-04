@@ -103,6 +103,9 @@ const postulacion = {
   cargo_codigo: 'AFILIADOS', respaldado_organizacion: true,
   organizacion_nombre: 'Confederación de Trabajadores', organizacion_documento: org.data.id,
   formacion: formacion(subido.data.id),
+  experiencia: [{ tipo: 'GENERAL', cargo: 'Analista financiera', institucion: 'Cooperativa JEP', fecha_inicio: '2019-02-01',
+    fecha_fin: '2024-06-30', actividades: 'FINANZAS', descripcion_funciones: 'Análisis de crédito y riesgo',
+    documento_respaldo: subido.data.id }],
   inhabilidades: opciones.inhabilidades.map((q) => ({ codigo: q.codigo, respuesta: q.respuesta_habilitante })),
 }
 const inventado = 'a'.repeat(32) + '__no-existe.pdf'
