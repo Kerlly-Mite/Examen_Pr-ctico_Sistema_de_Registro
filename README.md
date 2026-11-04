@@ -3,7 +3,7 @@
 Examen práctico del primer parcial — **Frameworks de Programación Web** (UPSE).
 Módulo de registro (EF-11) y formulario de postulación (EF-12) del Concurso Público de Méritos y Oposición del Directorio del BIESS, según el Requerimiento Funcional IESS v1.4 (Resolución C.D. 701). Proyecto desarrollado por tres integrantes.
 
-**Aplicación en línea:** https://TU_DOMINIO (se puede instalar como PWA desde el navegador)
+**Aplicación en línea:** https://13-140-208-96.sslip.io (se puede instalar como PWA desde el navegador)
 
 ## Qué hace
 
