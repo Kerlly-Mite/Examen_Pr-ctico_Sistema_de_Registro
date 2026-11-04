@@ -264,6 +264,7 @@ Si `cumple` es `true`, mostrar `estado` y la `pregunta` del respaldo de organiza
 | Debe aceptar el consentimiento (1.10.1) | 400 `solicitud_invalida` |
 | Debe estar guardada antes | 422 `postulacion_incompleta` |
 | Domicilio (país, provincia/cantón o textos, celular, calle principal), cargo y respuesta del respaldo de organización completos; si dijo que tiene familiares, al menos uno | 422 `postulacion_incompleta` (con `seccion`) |
+| Al menos una formación académica (1.5) y una experiencia profesional (1.6) | 422 `postulacion_incompleta` (con `seccion`) |
 | Las 13 preguntas de inhabilidades respondidas | 422 `postulacion_incompleta` (con `preguntas` faltantes) |
 | Ninguna respuesta inhabilitante (según `respuesta_habilitante` de `/opciones`) | 403 `postulante_inhabilitado` (con `preguntas`) |
 | 1.9.7 "Sí" (con sus datos) **no** impide enviar: `impide_postular` es `false`; los datos constan en el formulario final y los evalúa la Comisión de Selección | — |
