@@ -3,6 +3,8 @@
 Examen práctico del primer parcial — **Frameworks de Programación Web** (UPSE).
 Módulo de registro (EF-11) y formulario de postulación (EF-12) del Concurso Público de Méritos y Oposición del Directorio del BIESS, según el Requerimiento Funcional IESS v1.4 (Resolución C.D. 701). Proyecto desarrollado por tres integrantes.
 
+**Aplicación en línea:** https://TU_DOMINIO (se puede instalar como PWA desde el navegador)
+
 ## Qué hace
 
 - **Registro** en dos pasos: verificación de identidad con cédula y fecha de expedición o código dactilar (simulado), y luego correo y contraseña.
@@ -11,6 +13,7 @@ Módulo de registro (EF-11) y formulario de postulación (EF-12) del Concurso P�
 - **Reglas de negocio** en el servidor: solo nacionalidad ecuatoriana, validación de la calidad de afiliado, jubilado o empleador, datos de la pareja y cálculo de la experiencia sin contar dos veces los periodos que se cruzan.
 - **Envío** con consentimiento, firma, código de postulación único y **correo real** de confirmación con el **formulario PDF adjunto**.
 - **Documentos PDF reales**: subida al servidor con validación del contenido (no solo la extensión), máximo 2 MB por archivo de respaldo, 4 MB el de la organización y 50 MB por postulante. Formulario de postulación descargable en PDF con diseño institucional.
+- **PWA instalable** en celular y computador: abre sin conexión (solo la interfaz; nunca guarda datos de `/api`) y avisa cuando hay una versión nueva. Detalle en [`docs/PWA.md`](docs/PWA.md).
 
 ## Arquitectura
 
@@ -39,7 +42,8 @@ Backend en capas con **inyección de dependencias** (cada capa recibe la inferio
 | Base de datos | PostgreSQL 16 |
 | Caché y bloqueos | Redis |
 | Autenticación | JWT |
-| Infraestructura | Docker Compose (PostgreSQL y Redis) |
+| PWA | vite-plugin-pwa (Workbox) |
+| Infraestructura | Docker Compose (PostgreSQL y Redis); en producción además backend, frontend y Caddy (HTTPS automático) |
 
 ## Prerrequisitos
 
@@ -60,7 +64,10 @@ No hace falta instalar PostgreSQL ni Redis en la máquina: los levanta `docker-c
 backend/      API en Go (config, database, handlers, middleware, models, repositories, routes, services, pruebas)
 frontend/     Aplicación React (src/api, components, context, hooks, lib, pages, types)
 docs/API.md   Contrato de la API (rutas, JSON y códigos de error)
-docker-compose.yml, .env.example
+docs/PWA.md   Cómo funciona y cómo se prueba la PWA
+docker-compose.yml        Desarrollo local: PostgreSQL y Redis
+docker-compose.prod.yml   Producción: PostgreSQL, Redis, backend, frontend y Caddy
+Caddyfile, .env.example
 ~~~
 
 ## Ejecución local
@@ -103,6 +110,33 @@ curl http://localhost:3001/api/health
 curl http://localhost:3001/api/catalogos/paises
 ~~~
 
+## Despliegue en producción (VPS)
+
+Un servidor Linux con Docker (por ejemplo Ubuntu 24.04) levanta todo con `docker-compose.prod.yml`:
+
+~~~
+Internet --HTTPS--> Caddy (frontend + PWA, certificado automático)
+                      |  /api/*
+                      +------> backend Go --> PostgreSQL y Redis (sin puertos expuestos)
+~~~
+
+1. Apunta un dominio (o usa `IP.sslip.io`, por ejemplo `203-0-113-10.sslip.io`) a la IP del servidor y abre solo los puertos 22, 80 y 443.
+2. Clona el repositorio y crea el `.env` **en el servidor** (nunca en Git) a partir de `.env.example`, con:
+   `DOMINIO`, `DB_PASSWORD` (una contraseña nueva), `JWT_SECRET` (nuevo, mínimo 32 caracteres) y las variables `SMTP_*`.
+3. Levanta todo:
+
+~~~bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml logs -f backend     # ver que conecte a PostgreSQL, Redis y SMTP
+curl https://TU_DOMINIO/api/health
+~~~
+
+Caddy obtiene el certificado HTTPS solo (necesario para instalar la PWA). Los datos y los PDF quedan en volúmenes
+de Docker (`pgdata`, `uploads`), así que sobreviven a reinicios y a nuevos despliegues. El backend usa la hora de
+Ecuador (`TZ=America/Guayaquil`) para las fechas del formulario PDF y de los correos.
+
+Para actualizar después de un cambio en `main`: `git pull` y el mismo `docker compose ... up -d --build`.
+
 ## Base de datos
 
 Scripts en `backend/database/` (se ejecutan en orden alfabético):
@@ -141,6 +175,13 @@ Usuarios de prueba (contraseña `Clave1234`, el correo puede ser cualquiera):
 | 1705678900 | 1000000005 | Extranjero: la postulación se cierra por nacionalidad |
 | 0104567896 | 1000000004 | José Luis: afiliado en unión de hecho (pide los datos de la pareja) |
 | 0901234567 | 1000000001 | María Fernanda: bloqueo por intentos fallidos y prueba de correo y documentos |
+| 0912345675 | A1B2C3D4E5 | Jorge Luis: afiliado casado (pide los datos de la pareja) |
+| 1709876542 | E3333I1222 | Ana Patricia: afiliada soltera |
+| 0102030400 | V1234V5678 | Luis Diego: jubilado |
+| 2401234568 | K9H8G7F6D5 | Diego Andrés: empleador en unión de hecho |
+| 1304567892 | M7N6B5V4C3 | María José: afiliada soltera |
+
+Las cinco últimas se agregaron después: si tu base de datos ya existía, recréala con `docker compose down -v && docker compose up -d` para cargarlas.
 
 ## Decisiones técnicas
 
@@ -161,11 +202,15 @@ Usuarios de prueba (contraseña `Clave1234`, el correo puede ser cualquiera):
 | 3 | Caché de catálogos en Redis | A (Kerlly) | Hecha |
 | 4-5 | Postulación con transacciones, reglas de negocio (EF-12), correo real por SMTP, subida de PDF y formulario PDF | B (María) | Hecha |
 | 6-7 | Frontend: autenticación, formulario completo, rutas protegidas, estados de carga y error | C (Estefany) | Hecha |
-| 8 | README final, revisión cruzada y guion de sustentación | Las tres | En curso |
+| Extra | Personas de prueba adicionales con código dactilar alfanumérico | A (Kerlly) | Hecha |
+| Extra | PWA instalable con modo sin conexión y aviso de nueva versión | C (Estefany) | Hecha |
+| Extra | Despliegue en VPS con Docker Compose y Caddy (HTTPS automático) | C (Estefany) | Hecha |
+| Extra | Correcciones tras la revisión: errores en JSON, tiempo límite en el frontend, regla de la pregunta 1.9.7, máximo de 50 MB por postulante y hora de Ecuador en producción | B (María) | Hecha |
+| 8 | README final, revisión cruzada y guion de sustentación | Las tres | Hecha |
 
 ## Flujo de Git
 
-Ramas permanentes `main` (estable) y `develop` (integración); una rama por fase (`feature/...`, `docs/...`); Pull Request hacia `develop` revisado por otra integrante; commits con prefijo `feat:`, `fix:`, `docs:` o `chore:`; nadie hace push directo a `main` ni a `develop`.
+Ramas permanentes `main` (estable) y `develop` (integración); una rama por fase o corrección (`feature/...`, `fix/...`, `docs/...`); Pull Request hacia `develop` revisado por otra integrante; commits con prefijo `feat:`, `fix:`, `test:`, `docs:` o `chore:`; nadie hace push directo a `main` ni a `develop`.
 
 ## Alcance y limitaciones
 
