@@ -38,7 +38,8 @@ export function SeccionExperiencia() {
     lista.quitar(indice)
   }
 
-  const vistaPrevia = textoDuracion(null, form.fecha_inicio, form.fecha_fin)
+  const fechaFutura = [form.fecha_inicio, form.fecha_fin].some((f) => f !== null && f > fechaHoyISO())
+  const vistaPrevia = fechaFutura ? null : textoDuracion(null, form.fecha_inicio, form.fecha_fin)
   const pendiente = lista.hayContenido() ? 'Tiene una experiencia sin agregar. Pulse Agregar o Cancelar.' : null
 
   return (

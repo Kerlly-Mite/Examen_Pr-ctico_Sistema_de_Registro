@@ -40,6 +40,9 @@ services:
       REDIS_PORT: "6379"
       UPLOADS_DIR: /data/uploads
       FRONTEND_URL: https://${DOMINIO}
+      # Hora de Ecuador: sin esto el contenedor usa UTC y el formulario PDF y los correos
+      # mostrarían la fecha de envío 5 horas adelantada (la imagen ya incluye tzdata).
+      TZ: America/Guayaquil
     volumes:
       - uploads:/data/uploads
     depends_on:
