@@ -110,8 +110,8 @@ export function calcularPendientes(p: Postulacion, o: OpcionesPostulacion): Pend
     )
   }
 
-  if (p.formacion.length === 0) recomendaciones.push('Aún no registra formación académica')
-  if (p.experiencia.length === 0) recomendaciones.push('Aún no registra experiencia profesional')
+  if (p.formacion.length === 0) obligatorios.push('Formación académica (agregue al menos una)')
+  if (p.experiencia.length === 0) obligatorios.push('Experiencia profesional (agregue al menos una)')
 
   return { obligatorios, recomendaciones }
 }
