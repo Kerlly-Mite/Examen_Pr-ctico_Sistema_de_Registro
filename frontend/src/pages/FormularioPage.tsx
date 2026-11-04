@@ -88,8 +88,8 @@ function Contenido() {
       {bloqueo ? (
         <SeccionPersonal />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
-          <aside className="h-fit rounded-lg border border-slate-200 bg-white p-4 shadow-sm print:hidden lg:sticky lg:top-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+          <aside className="h-fit min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm print:hidden lg:sticky lg:top-4">
             <p className="text-sm font-semibold text-biess-800">Secciones</p>
             <p className="mt-1 text-xs text-slate-600">
               {completas} de {total} completas
@@ -102,7 +102,7 @@ function Contenido() {
             </div>
             <ol className="mt-3 flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
               {secciones.map((s, i) => (
-                <li key={s.id}>
+                <li key={s.id} className="shrink-0 lg:shrink">
                   <button
                     type="button"
                     onClick={() => ir(i)}
