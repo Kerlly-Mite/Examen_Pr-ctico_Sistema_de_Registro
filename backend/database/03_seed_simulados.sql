@@ -23,4 +23,21 @@ INSERT INTO historial_laboral_simulado (cedula, es_afiliado, es_jubilado, es_emp
   ('0104567896', TRUE, FALSE, FALSE),
   ('1705678900', FALSE, FALSE, FALSE);
 
+-- Personas ficticias adicionales (cedulas validas por modulo 10, dactilar alfanumerico)
+-- 6 = afiliado | 7 = afiliada | 8 = jubilado | 9 = empleador (NO afiliado) | 10 = afiliada
+INSERT INTO registro_civil_simulado
+  (cedula, nombres, apellidos, genero, fecha_nacimiento, nacionalidad, estado_civil, fecha_expedicion, codigo_dactilar) VALUES
+  ('0912345675', 'JORGE LUIS', 'PRUEBA MORA', 'MASCULINO', '1988-04-17', 'ECUATORIANA', 'CASADO', '2019-08-12', 'A1B2C3D4E5'),
+  ('1709876542', 'ANA PATRICIA', 'PRUEBA VERA', 'FEMENINO', '1992-09-03', 'ECUATORIANA', 'SOLTERO', '2021-01-20', 'E3333I1222'),
+  ('0102030400', 'LUIS DIEGO', 'PRUEBA CUEVA', 'MASCULINO', '1952-12-11', 'ECUATORIANA', 'VIUDO', '2016-05-30', 'V1234V5678'),
+  ('2401234568', 'DIEGO ANDRES', 'PRUEBA SOTO', 'MASCULINO', '1975-02-28', 'ECUATORIANA', 'UNION_DE_HECHO', '2018-10-09', 'K9H8G7F6D5'),
+  ('1304567892', 'MARIA JOSE', 'PRUEBA LEON', 'FEMENINO', '1996-06-22', 'ECUATORIANA', 'SOLTERO', '2022-03-15', 'M7N6B5V4C3');
+
+INSERT INTO historial_laboral_simulado (cedula, es_afiliado, es_jubilado, es_empleador) VALUES
+  ('0912345675', TRUE, FALSE, FALSE),
+  ('1709876542', TRUE, FALSE, FALSE),
+  ('0102030400', FALSE, TRUE, FALSE),
+  ('2401234568', FALSE, FALSE, TRUE),
+  ('1304567892', TRUE, FALSE, FALSE);
+
 COMMIT;
