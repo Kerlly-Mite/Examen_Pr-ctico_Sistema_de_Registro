@@ -174,6 +174,7 @@ func postulacionCompleta() *models.Postulacion {
 	p.PaisID, p.ProvinciaID, p.CantonID = &ec, &prov, &canton
 	p.TelefonoCelular, p.CallePrincipal = "0991111111", "Av. Solano"
 	p.CargoCodigo, p.RespaldadoOrganizacion = "AFILIADOS", &no
+	p.Formacion, p.Experiencia = []models.Formacion{{}}, []models.Experiencia{{}}
 	p.Inhabilidades = []models.RespuestaInhabilidad{{Codigo: "1.9.1", Respuesta: true}, {Codigo: "1.9.2", Respuesta: false},
 		{Codigo: "1.9.7", Respuesta: false}}
 	return p
@@ -302,5 +303,19 @@ func TestServicioRechazaCargoNoHabilitadoSinGuardar(t *testing.T) {
 	}
 	if repo.guardados != 0 {
 		t.Error("una postulación rechazada NO debe llegar a la base de datos")
+	}
+}
+
+func TestEnvioExigeFormacionYExperiencia(t *testing.T) {
+	p := postulacionCompleta()
+	p.Formacion = nil
+	if err := validarEnvio(p, ecuadorPrueba, preguntasPrueba); codigoDe(err) != "postulacion_incompleta" {
+		t.Errorf("sin formación académica no debe poder enviarse: se obtuvo %q", codigoDe(err))
+	}
+
+	p = postulacionCompleta()
+	p.Experiencia = nil
+	if err := validarEnvio(p, ecuadorPrueba, preguntasPrueba); codigoDe(err) != "postulacion_incompleta" {
+		t.Errorf("sin experiencia profesional no debe poder enviarse: se obtuvo %q", codigoDe(err))
 	}
 }

@@ -420,6 +420,14 @@ func validarEnvio(p *models.Postulacion, ecuadorID int, preguntas []models.Pregu
 		return errIncompleta("Cargo al que postula", "responda si está respaldado por una organización")
 	}
 
+	// 1.5 y 1.6: una postulación de méritos necesita al menos una formación y una experiencia.
+	if len(p.Formacion) == 0 {
+		return errIncompleta("Formación académica", "agregue al menos una formación académica")
+	}
+	if len(p.Experiencia) == 0 {
+		return errIncompleta("Experiencia profesional", "agregue al menos una experiencia profesional")
+	}
+
 	// 1.9: todas las preguntas respondidas y, en las que impiden postular, con la respuesta habilitante.
 	respuestas := map[string]bool{}
 	for _, r := range p.Inhabilidades {
